@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ .AppName }} - Guide</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <main class="app-shell">
+    <div class="topbar">
+      <div class="brand">{{ .AppName }}</div>
+      <div class="topbar-right">
+        <nav class="topnav">
+          <a class="nav-link" href="/dashboard">Dashboard</a>
+          <a class="nav-link active" href="/guide">Guide</a>
+          {{ if .User.IsAdmin }}<a class="nav-link" href="/admin">Admin</a>{{ end }}
+        </nav>
+        <form method="post" action="/logout" class="topbar-logout">
+          <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+          <button class="btn secondary" type="submit">Log out</button>
+        </form>
+      </div>
+    </div>
+
+    <section class="container">
+      <header class="section-head">
+        <div>
+          <p class="eyebrow">User Guide</p>
+          <h1 class="page-title">How To Watch And Request</h1>
+        </div>
+        <p class="subtitle">Follow these steps to watch on your devices and request movies or shows.</p>
+      </header>
+
+      <div class="grid">
+        <section class="panel half">
+          <h2>Watch in your browser</h2>
+          <p class="subtitle">Click the button below, then sign in with your {{ .MediaServerName }} username and password.</p>
+          <div class="actions">
+            <a class="btn" href="{{ .MediaServerPublicURL }}">Open {{ .MediaServerName }}</a>
+          </div>
+        </section>
+
+        <section class="panel half">
+          <h2>Request movies and shows</h2>
+          <p class="subtitle">Use Seerr to request something new to watch. Search for a movie or TV show, then press Request.</p>
+          <div class="actions">
+            <a class="btn" href="{{ .SeerrPublicURL }}">Open Seerr</a>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Set Up {{ .MediaServerName }} On TV Or Mobile App</h2>
+          <ul class="stack">
+            <li class="stack-item">
+              <strong>1. Install the {{ .MediaServerName }} app</strong>
+              <span class="meta-line">On your TV or phone, open the app store and install <strong>{{ .MediaServerName }}</strong>.</span>
+            </li>
+            <li class="stack-item">
+              <strong>2. Enter the server address</strong>
+              <span class="meta-line">When the app asks for a server, enter: <strong>{{ .MediaServerPublicURL }}</strong></span>
+            </li>
+            <li class="stack-item">
+              <strong>3. Sign in</strong>
+              <span class="meta-line">Use your {{ .MediaServerName }} username and password.</span>
+            </li>
+            <li class="stack-item">
+              <strong>4. Use Quick Connect (easier on TV remotes)</strong>
+              <span class="meta-line">On the TV app, choose <strong>Quick Connect</strong> to get a code. On your phone or computer, sign in to {{ .MediaServerName }} and open <strong>Settings -> Quick Connect</strong>, enter the code, then approve. Your TV app will sign in automatically.</span>
+            </li>
+            <li class="stack-item">
+              <strong>If it does not work</strong>
+              <span class="meta-line">Check that the server is exactly <strong>{{ .MediaServerPublicURL }}</strong> (with https), then try again. If login fails, double-check username/password.</span>
+            </li>
+          </ul>
+        </section>
+
+        <section class="panel">
+          <h2>After You Request A Movie Or Show</h2>
+          <ul class="stack">
+            <li class="stack-item"><strong>1.</strong> Open Seerr and request a movie or show.</li>
+            <li class="stack-item"><strong>2.</strong> The request is processed in the background.</li>
+            <li class="stack-item"><strong>3.</strong> This can take a little time, depending on availability.</li>
+            <li class="stack-item"><strong>4.</strong> When ready, it will appear in {{ .MediaServerName }}.</li>
+            <li class="stack-item"><strong>5.</strong> If it has been a long time, open an issue in Seerr for that movie or show.</li>
+          </ul>
+        </section>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

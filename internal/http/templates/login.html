@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ .AppName }} - Login</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body class="auth-page login-page">
+  <main class="app-shell auth-shell login-shell">
+    <section class="auth-card login-card">
+      <div class="login-layout">
+        <div class="login-visual" aria-hidden="true">
+          <div class="login-brandmark">
+            <img src="/static/logo.png" alt="" class="login-logo">
+          </div>
+        </div>
+
+        <div class="login-panel">
+          <p class="eyebrow">Media Portal</p>
+          <h1>{{ .AppName }}</h1>
+          {{ if .Error }}<p class="error">{{ .Error }}</p>{{ end }}
+
+          <form method="post" action="/login" class="form login-form">
+            <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+            <label>Username<input name="username" autocomplete="username" required></label>
+            <label>Password<input name="password" type="password" autocomplete="current-password" required></label>
+            <label class="remember-toggle">
+              <input type="checkbox" name="remember_me">
+              <span>Remember me</span>
+            </label>
+            <div class="actions login-actions">
+              <button class="btn" type="submit">Log in</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

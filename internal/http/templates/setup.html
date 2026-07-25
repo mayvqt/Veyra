@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ .AppName }} - Setup</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body class="auth-page setup-page">
+  <main class="app-shell auth-shell">
+    <section class="auth-card setup-container">
+      <header class="section-head">
+        <div>
+          <p class="eyebrow">First Run</p>
+          <h1 class="page-title">Set up {{ .AppName }}</h1>
+          <p class="subtitle">Save service URLs and API keys securely before signing in.</p>
+        </div>
+      </header>
+
+      {{ if .SetupComplete }}
+      <section class="panel setup-complete">
+        <h2>Setup saved</h2>
+        <p class="subtitle">Veyra is restarting so the encrypted setup values can be loaded.</p>
+      </section>
+      {{ else }}
+      {{ if .Error }}<p class="error">{{ .Error }}</p>{{ end }}
+      <form method="post" action="/setup" class="form">
+        <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+
+        <section class="panel setup-section">
+          <div class="panel-title-row">
+            <div>
+              <h2>App</h2>
+              <p class="subtitle">External URL used for links and reverse proxy setups.</p>
+            </div>
+          </div>
+          <div class="form-grid">
+            <label>App Base URL<input name="app_base_url" value="{{ .Setup.AppBaseURL }}" placeholder="https://veyra.home.test" required></label>
+          </div>
+        </section>
+
+        <section class="panel setup-section">
+          <div class="panel-title-row">
+            <div>
+              <h2>Media Server</h2>
+              <p class="subtitle">Choose Jellyfin or Emby for login, media, posters, stats, and active playback.</p>
+            </div>
+          </div>
+          <div class="form-grid">
+            <label>Service
+              <select name="media_server_type" required>
+                <option value="jellyfin" {{ if eq .Setup.MediaServerType "jellyfin" }}selected{{ end }}>Jellyfin</option>
+                <option value="emby" {{ if eq .Setup.MediaServerType "emby" }}selected{{ end }}>Emby</option>
+              </select>
+            </label>
+            <label>Internal URL<input name="media_server_url" value="{{ .Setup.MediaServerURL }}" placeholder="http://mediaserver:8096" required></label>
+            <label>Public URL<input name="media_server_public_url" value="{{ .Setup.MediaServerPublicURL }}" placeholder="https://media.home.test"></label>
+            <label>API Key<input type="password" name="media_server_api_key" value="{{ .Setup.MediaServerAPIKey }}" autocomplete="off"></label>
+          </div>
+        </section>
+
+        <section class="panel setup-section">
+          <div class="panel-title-row">
+            <div>
+              <h2>Seerr</h2>
+              <p class="subtitle">Optional request search, creation, quota, and request activity.</p>
+            </div>
+          </div>
+          <div class="form-grid">
+            <label>Internal URL<input name="seerr_url" value="{{ .Setup.SeerrURL }}" placeholder="http://seerr:5055"></label>
+            <label>Public URL<input name="seerr_public_url" value="{{ .Setup.SeerrPublicURL }}" placeholder="https://requests.home.test"></label>
+            <label>API Key<input type="password" name="seerr_api_key" value="{{ .Setup.SeerrAPIKey }}" autocomplete="off"></label>
+          </div>
+        </section>
+
+        <section class="panel setup-section">
+          <div class="panel-title-row">
+            <div>
+              <h2>Arr Services</h2>
+              <p class="subtitle">Optional queue, calendar, indexer health, and storage warnings.</p>
+            </div>
+          </div>
+          <div class="form-grid">
+            <label>Sonarr URL<input name="sonarr_url" value="{{ .Setup.SonarrURL }}" placeholder="http://sonarr:8989"></label>
+            <label>Sonarr API Key<input type="password" name="sonarr_api_key" value="{{ .Setup.SonarrAPIKey }}" autocomplete="off"></label>
+            <label>Radarr URL<input name="radarr_url" value="{{ .Setup.RadarrURL }}" placeholder="http://radarr:7878"></label>
+            <label>Radarr API Key<input type="password" name="radarr_api_key" value="{{ .Setup.RadarrAPIKey }}" autocomplete="off"></label>
+            <label>Prowlarr URL<input name="prowlarr_url" value="{{ .Setup.ProwlarrURL }}" placeholder="http://prowlarr:9696"></label>
+            <label>Prowlarr API Key<input type="password" name="prowlarr_api_key" value="{{ .Setup.ProwlarrAPIKey }}" autocomplete="off"></label>
+          </div>
+        </section>
+
+        <div class="actions">
+          <button class="btn" type="submit">Save And Restart</button>
+        </div>
+      </form>
+      {{ end }}
+    </section>
+  </main>
+</body>
+</html>

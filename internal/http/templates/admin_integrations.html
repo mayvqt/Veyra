@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ .AppName }} - Admin Integrations</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <main class="app-shell">
+    <div class="topbar">
+      <div class="brand">{{ .AppName }}</div>
+      <div class="topbar-right">
+        <nav class="topnav">
+          <a class="nav-link" href="/dashboard">Dashboard</a>
+          <a class="nav-link" href="/admin">Overview</a>
+          <a class="nav-link" href="/admin/settings">Settings</a>
+          <a class="nav-link" href="/admin/users">Users</a>
+          <a class="nav-link" href="/admin/logs">Logs</a>
+          <a class="nav-link" href="/admin/playback">Playback</a>
+          <a class="nav-link active" href="/admin/integrations">Integrations</a>
+        </nav>
+        <form method="post" action="/logout" class="topbar-logout">
+          <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+          <button class="btn secondary" type="submit">Log out</button>
+        </form>
+      </div>
+    </div>
+
+    <section class="container">
+      <header class="section-head">
+        <div>
+          <p class="eyebrow">Admin</p>
+          <h1 class="page-title">Integrations</h1>
+        </div>
+        <p class="subtitle">Current connector status, config readiness, and recent failures in one place.</p>
+      </header>
+
+      <section class="panel integrations-panel">
+        <div class="panel-title-row">
+          <div>
+            <h2>Configured Services</h2>
+            <p class="subtitle">Live connectors and the data Veyra can currently verify.</p>
+          </div>
+        </div>
+        <div class="integrations-board">
+        {{ range .ServiceStatuses }}
+        {{ if .Configured }}
+        <article class="integration-card {{ if eq .Health "Online" }}integration-online{{ else }}integration-offline{{ end }}">
+          <div class="integration-head">
+            <div class="integration-title">
+              <h2>{{ .Name }}</h2>
+              <span class="meta-line">Configured</span>
+            </div>
+            <span class="status-inline">
+              <span class="status-dot integration-health {{ if eq .Health "Online" }}ok{{ else }}bad{{ end }}" role="img" aria-label="{{ .Name }} {{ .Health }}" title="{{ .Name }} {{ .Health }}"></span>
+              <span class="meta-line">{{ .Health }}</span>
+            </span>
+          </div>
+
+          <dl class="integration-snapshot">
+            <div><dt>Internal</dt><dd>{{ if .Internal }}{{ .Internal }}{{ else }}-{{ end }}</dd></div>
+            <div><dt>Public</dt><dd>{{ if .Public }}{{ .Public }}{{ else }}-{{ end }}</dd></div>
+            <div><dt>Version</dt><dd>{{ if .Version }}{{ .Version }}{{ else }}-{{ end }}</dd></div>
+            <div><dt>Runtime</dt><dd>{{ if .Runtime }}{{ .Runtime }}{{ else }}-{{ end }}</dd></div>
+          </dl>
+
+          {{ if .Stats }}
+          <div class="integration-stat-strip">
+            {{ range .Stats }}
+            <div><span class="meta-label">{{ .Label }}</span><strong>{{ .Value }}</strong></div>
+            {{ end }}
+          </div>
+          {{ end }}
+
+          <div class="integration-card-footer">
+            <span class="meta-line">Checked {{ .LastChecked }}</span>
+            {{ if or .LastError .Issues .DiskWarnings .RecentErrors }}
+            <details class="integration-details">
+              <summary>Details</summary>
+              {{ if .LastError }}
+              <section class="integration-detail">
+                <h3>Last Error</h3>
+                <p class="integration-alert">{{ .LastError }}</p>
+              </section>
+              {{ end }}
+
+              {{ if .Issues }}
+              <section class="integration-detail">
+                <h3>API Warnings</h3>
+                <ul class="stack integration-notes">
+                {{ range .Issues }}
+                  <li class="stack-item warn">{{ . }}</li>
+                {{ end }}
+                </ul>
+              </section>
+              {{ end }}
+
+              {{ if .DiskWarnings }}
+              <section class="integration-detail">
+                <h3>Storage</h3>
+                <ul class="stack integration-notes">
+                {{ range .DiskWarnings }}
+                  <li class="stack-item warn">{{ . }}</li>
+                {{ end }}
+                </ul>
+              </section>
+              {{ end }}
+
+              {{ if .RecentErrors }}
+              <section class="integration-detail">
+                <h3>Status Notes</h3>
+                <ul class="stack integration-notes">
+                {{ range .RecentErrors }}
+                  <li class="stack-item">{{ . }}</li>
+                {{ end }}
+                </ul>
+              </section>
+              {{ end }}
+            </details>
+            {{ end }}
+          </div>
+        </article>
+        {{ end }}
+        {{ end }}
+        </div>
+      </section>
+
+      <section class="panel integrations-panel">
+        <div class="panel-title-row">
+          <div>
+            <h2>Optional Connectors</h2>
+            <p class="subtitle">Unconfigured services are informational unless you use them in this stack.</p>
+          </div>
+          <a class="btn secondary" href="/admin/settings">Settings</a>
+        </div>
+        <ul class="stack integration-setup-list">
+        {{ range .ServiceStatuses }}
+        {{ if not .Configured }}
+          <li class="stack-item integration-setup-row {{ if .Required }}integration-required{{ else }}integration-neutral{{ end }}">
+            <div>
+              <strong>{{ .Name }}</strong>
+              <span class="meta-line">{{ if .Required }}Required setup missing{{ else }}Optional connector not configured{{ end }}</span>
+            </div>
+            <span class="status-inline">
+              <span class="status-dot integration-health neutral" role="img" aria-label="{{ .Name }} {{ .Health }}" title="{{ .Name }} {{ .Health }}"></span>
+              <span class="meta-line">{{ .Health }}</span>
+            </span>
+          </li>
+        {{ end }}
+        {{ end }}
+        </ul>
+      </section>
+
+      <div class="actions"><a class="btn secondary" href="/admin">Back</a></div>
+    </section>
+  </main>
+</body>
+</html>

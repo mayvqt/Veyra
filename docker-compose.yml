@@ -1,0 +1,13 @@
+services:
+  veyra:
+    image: ghcr.io/mayvqt/veyra:latest
+    build: .
+    container_name: veyra
+    restart: unless-stopped
+    ports:
+      - "3767:3767"
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - ./config:/config

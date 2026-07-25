@@ -1,0 +1,38 @@
+.git
+.gitignore
+.agents/
+.codex/
+
+# Environment and secrets
+.env
+.env.*
+# Keep example env files out of public images too. Compose reads these from
+# the host checkout, not from inside the built image.
+.env.example
+
+# Local runtime/build data
+build/
+data/
+config/
+
+# Local databases
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Logs and temporary files
+*.log
+tmp/
+*.tmp
+
+# Go/editor caches
+.cache/
+bin/
+dist/
+*.test
+*.out
+coverage.out
+
+# Private notes
+PRIVATE_PUBLISH_GUIDE.md

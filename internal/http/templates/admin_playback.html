@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ .AppName }} - Admin Playback</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <main class="app-shell">
+    <div class="topbar">
+      <div class="brand">{{ .AppName }}</div>
+      <div class="topbar-right">
+        <nav class="topnav">
+          <a class="nav-link" href="/dashboard">Dashboard</a>
+          <a class="nav-link" href="/admin">Overview</a>
+          <a class="nav-link" href="/admin/settings">Settings</a>
+          <a class="nav-link" href="/admin/users">Users</a>
+          <a class="nav-link" href="/admin/logs">Logs</a>
+          <a class="nav-link active" href="/admin/playback">Playback</a>
+          <a class="nav-link" href="/admin/integrations">Integrations</a>
+        </nav>
+        <form method="post" action="/logout" class="topbar-logout">
+          <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+          <button class="btn secondary" type="submit">Log out</button>
+        </form>
+      </div>
+    </div>
+
+    <section class="container">
+      <header class="section-head">
+        <div>
+          <p class="eyebrow">Admin</p>
+          <h1 class="page-title">Active playback</h1>
+        </div>
+        <p class="subtitle">Current {{ .MediaServerName }} playback sessions.</p>
+      </header>
+
+      <section class="panel">
+        <div class="panel-title-row">
+          <div>
+            <h2>Sessions</h2>
+            <p class="subtitle">{{ len .Playback }} active session(s)</p>
+          </div>
+        </div>
+        {{ if .Playback }}
+        <ul class="stack playback-list">
+          {{ range .Playback }}
+          <li class="stack-item playback-row">
+            <div>
+              <strong>{{ .Title }}</strong>
+              <span class="meta-line">{{ .User }}{{ if .MediaType }} - {{ .MediaType }}{{ end }}</span>
+            </div>
+            <span class="meta-line">{{ if .Client }}{{ .Client }}{{ end }}{{ if .DeviceName }} on {{ .DeviceName }}{{ end }}</span>
+          </li>
+          {{ end }}
+        </ul>
+        {{ else }}
+        <p class="subtitle">No active playback sessions right now.</p>
+        {{ end }}
+      </section>
+
+      <div class="actions"><a class="btn secondary" href="/admin">Back</a></div>
+    </section>
+  </main>
+</body>
+</html>

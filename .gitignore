@@ -1,0 +1,42 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Local runtime/build bundles
+/build/
+/data/
+/config/
+
+# Local databases
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+
+# Go build/test artifacts
+bin/
+dist/
+*.test
+*.out
+coverage.out
+
+# Go caches (local workspace)
+.cache/
+
+# Temporary files
+tmp/
+*.tmp
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
+PRIVATE_PUBLISH_GUIDE.md
+.gocache

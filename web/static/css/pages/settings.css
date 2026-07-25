@@ -1,0 +1,68 @@
+.toggle-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.settings-panel {
+  scroll-margin-top: var(--space-3);
+}
+
+.settings-service-grid {
+  display: grid;
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.settings-service-card {
+  display: grid;
+  grid-auto-rows: max-content;
+  align-content: start;
+  gap: var(--space-2);
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: rgba(12, 18, 25, 0.64);
+  padding: var(--space-3);
+}
+
+.settings-service-card > .panel-title-row {
+  margin-bottom: 0;
+}
+
+.settings-service-card h3 {
+  margin: 0;
+  color: var(--accent-strong);
+  font-size: 0.86rem;
+}
+
+.settings-service-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: var(--space-2);
+}
+
+.settings-service-fields label > span {
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.settings-service-fields input {
+  min-width: 0;
+}
+
+.widget-toggle {
+  border-left: 0.22rem solid var(--line);
+}
+
+.widget-media { border-left-color: rgba(126, 167, 197, 0.68); }
+.widget-calendar { border-left-color: rgba(184, 194, 216, 0.68); }
+.widget-request-bot { border-left-color: rgba(146, 193, 178, 0.68); }
+.widget-requests { border-left-color: rgba(143, 181, 156, 0.68); }
+.widget-quota { border-left-color: rgba(211, 188, 133, 0.68); }
+.widget-queue { border-left-color: rgba(205, 162, 172, 0.68); }
+
+@media (max-width: 759px) {
+  .toggle-grid {
+    grid-template-columns: 1fr;
+  }
+}

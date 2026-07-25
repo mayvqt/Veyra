@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ .AppName }} - Dashboard</title>
+  <link rel="stylesheet" href="/static/app.css?v={{ .StaticVersion }}">
+</head>
+<body>
+  <main class="app-shell">
+    <div class="topbar">
+      <div class="brand">{{ .AppName }}</div>
+      <div class="topbar-right">
+        <nav class="topnav">
+          <a class="nav-link active" href="/dashboard">Dashboard</a>
+          <a class="nav-link" href="/guide">Guide</a>
+          {{ if .User.IsAdmin }}<a class="nav-link" href="/admin">Admin</a>{{ end }}
+        </nav>
+        <form method="post" action="/logout" class="topbar-logout">
+          <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+          <button class="btn secondary" type="submit">Log out</button>
+        </form>
+      </div>
+    </div>
+
+    <section class="container" data-dashboard-container>
+      <header class="section-head">
+        <div>
+          <p class="eyebrow">Dashboard</p>
+          <h1 class="page-title">Welcome back, <span class="role-tag {{ if .User.IsAdmin }}role-admin{{ else }}role-user{{ end }}">{{ .User.DisplayName }}</span>.</h1>
+        </div>
+      </header>
+      {{ if .DashboardMessage }}
+      <section class="panel admin-message">
+        <h2>Notice</h2>
+        <p>{{ .DashboardMessage }}</p>
+      </section>
+      {{ end }}
+
+      {{ if .SettingsShowRequestBot }}
+      <section class="panel request-bot" data-seerr-request-bot>
+        <div class="request-bot-head">
+          <div>
+            <h2>Requests</h2>
+            <p class="subtitle">Movies and shows</p>
+          </div>
+          <span class="status-dot {{ if eq .SeerrStatus "Online" }}ok{{ else }}bad{{ end }}" role="img" aria-label="Seerr {{ .SeerrStatus }}" title="Seerr {{ .SeerrStatus }}"></span>
+        </div>
+        <form class="request-bot-search" data-seerr-search-form>
+          <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}" data-seerr-csrf>
+          <label class="request-bot-query">
+            <span class="sr-only">Search Seerr</span>
+            <input name="q" type="search" autocomplete="off" placeholder="Search movies or shows" data-seerr-query>
+          </label>
+          <button class="btn" type="submit">Search</button>
+        </form>
+        <div class="request-bot-message" data-seerr-message hidden></div>
+        <ul class="request-bot-results" data-seerr-results></ul>
+      </section>
+      {{ end }}
+
+      {{ if .DashboardServices }}
+      <section class="panel services-panel" aria-labelledby="media-services-title">
+        <div class="panel-title-row quota-title-row">
+          <div>
+            <h2 id="media-services-title">Media Services</h2>
+            <p class="subtitle">Watch and request</p>
+          </div>
+        </div>
+        <div class="quota-meter-grid">
+          {{ range .DashboardServices }}
+          <article class="quota-meter">
+            <div class="quota-meter-head">
+              <div>
+                <strong>{{ .Name }}</strong>
+              </div>
+              <span class="status-dot {{ if eq .Status "Online" }}ok{{ else }}bad{{ end }}" role="img" aria-label="{{ .Name }} {{ .Status }}" title="{{ .Name }} {{ .Status }}"></span>
+            </div>
+            <a class="btn service-action" href="{{ .URL }}" target="_blank" rel="noopener noreferrer">Open {{ .Name }} <span aria-hidden="true">&nearr;</span></a>
+          </article>
+          {{ end }}
+        </div>
+      </section>
+      {{ end }}
+
+      <div class="grid dashboard-grid">
+        {{ if .SettingsShowQuota }}
+        <section class="panel quota-panel">
+          <div class="panel-title-row quota-title-row">
+            <div>
+              <h2>Request Quota</h2>
+              {{ if .QuotaValue }}<p class="subtitle">{{ .QuotaValue }}</p>{{ end }}
+            </div>
+            <span class="status-inline"><span class="status-dot {{ if eq .SeerrStatus "Online" }}ok{{ else }}bad{{ end }}" role="img" aria-label="Seerr {{ .SeerrStatus }}" title="Seerr {{ .SeerrStatus }}"></span></span>
+          </div>
+          {{ if .QuotaMeters }}
+          <div class="quota-meter-grid">
+            {{ range .QuotaMeters }}
+            <article class="quota-meter quota-meter-{{ .Class }}">
+              <div class="quota-meter-head">
+                <div>
+                  <strong>{{ .Label }}</strong>
+                  {{ if .Detail }}<span class="meta-line">{{ .Detail }}</span>{{ end }}
+                </div>
+                <span class="pill quota-pill quota-{{ .Class }}">{{ .Value }}</span>
+              </div>
+              <div class="quota-meter-track" aria-label="{{ .Label }} request quota remaining">
+                <span style="width: {{ .Percent }}%"></span>
+              </div>
+              <div class="quota-meter-steps" aria-hidden="true">
+                <span>Used</span>
+                <span>Remaining</span>
+                <span>Limit</span>
+              </div>
+            </article>
+            {{ end }}
+          </div>
+          {{ else if .QuotaValue }}
+          <p class="quota-value">{{ .QuotaValue }}</p>
+          {{ else if .QuotaNote }}
+          <p class="subtitle">{{ .QuotaNote }}</p>
+          {{ end }}
+        </section>
+        {{ end }}
+
+        {{ if .SettingsShowCalendar }}
+        <section class="panel">
+          <div class="panel-title-row">
+            <h2>Coming Up</h2>
+            <div class="calendar-tools">
+              <div class="calendar-legend" aria-label="Availability legend">
+                <span class="legend-item"><span class="legend-dot legend-available"></span>Available</span>
+                <span class="legend-item"><span class="legend-dot legend-upcoming"></span>Upcoming</span>
+                <span class="legend-item"><span class="legend-dot legend-missing"></span>Missing</span>
+              </div>
+              <div class="calendar-nav">
+                <a class="btn secondary" href="{{ .CalendarPrevURL }}" aria-label="Previous week">Prev</a>
+                <span class="pill">{{ .CalendarWeekLabel }}</span>
+                <a class="btn secondary" href="{{ .CalendarNextURL }}" aria-label="Next week">Next</a>
+              </div>
+            </div>
+          </div>
+          {{ if .UpcomingCalendarGroups }}
+          <div class="calendar-board">
+            {{ range .UpcomingCalendarGroups }}
+            <section class="calendar-day-row {{ if .IsToday }}is-today{{ end }}" data-date="{{ .Date }}">
+              <h3 class="calendar-day-label"><span>{{ .Label }}</span><span class="calendar-count">{{ .Count }}</span></h3>
+              <ul class="stack upcoming-list">
+                {{ range .Items }}
+                <li class="stack-item upcoming-row availability-card calendar-card-{{ .Availability }}">
+                  <div class="upcoming-main">
+                    <strong>{{ .Title }}</strong>
+                    {{ if .Subtitle }}<span class="meta-line">{{ .Subtitle }}</span>{{ end }}
+                  </div>
+                  <div class="upcoming-meta">
+                    <span class="calendar-local-time" data-utc="{{ .AirsAt.UTC.Format "2006-01-02T15:04:05Z07:00" }}">{{ .AirsAt.Format "15:04" }} UTC</span>
+                    <span class="pill availability-pill availability-{{ .Availability }}">{{ .Availability }}</span>
+                    <span class="pill">{{ .Kind }}</span>
+                    {{ if eq .Availability "available" }}
+                    <a class="mini-action" href="{{ $.MediaServerPublicURL }}">{{ $.MediaServerName }}</a>
+                    {{ else }}
+                    <a class="mini-action" href="{{ $.SeerrPublicURL }}">Seerr</a>
+                    {{ end }}
+                  </div>
+                </li>
+                {{ end }}
+                {{ if not .Items }}
+                <li class="stack-item upcoming-row upcoming-empty">
+                  <span class="meta-line">No scheduled items</span>
+                </li>
+                {{ end }}
+              </ul>
+            </section>
+            {{ end }}
+          </div>
+          {{ else }}
+          <p class="subtitle">No upcoming calendar items in the next 7 days.</p>
+          {{ end }}
+        </section>
+        {{ end }}
+
+        {{ if .SettingsShowRecentMedia }}
+        <section class="panel">
+          <h2>Recently Added</h2>
+          {{ if .RecentlyAdded }}
+          <ul class="media-grid recently-added-grid" id="recently-added-list">
+            {{ range .RecentlyAdded }}
+            <li class="media-card">
+              {{ if .ImageURL }}<img class="poster" src="{{ .ImageURL }}" alt="{{ .Title }} poster" loading="lazy">{{ else }}<div class="poster poster-empty">{{ .Type }}</div>{{ end }}
+              <div class="media-content">
+                <strong>{{ .Title }}</strong>
+                <span class="meta-line">{{ .Type }}{{ if .Year }} · {{ .Year }}{{ end }}</span>
+                {{ if .OpenURL }}
+                <a class="mini-action media-action" href="{{ .OpenURL }}">{{ $.MediaServerName }}</a>
+                {{ end }}
+              </div>
+            </li>
+            {{ end }}
+          </ul>
+          {{ else }}
+          {{ if .RecentMediaUnavailable }}
+          <p class="subtitle">Recently added media is unavailable right now.</p>
+          {{ else }}
+          <p class="subtitle">No recently added media yet.</p>
+          {{ end }}
+          {{ end }}
+        </section>
+        {{ end }}
+
+        {{ if .SettingsShowRecentReqs }}
+        <section class="panel">
+          <h2>Recent Requests</h2>
+          {{ if .RecentRequests }}
+          <ul class="stack request-list">
+            {{ range .RecentRequests }}
+            <li class="stack-item request-row">
+              <div class="request-head">
+                <div class="request-title-block">
+                  <strong>{{ .Title }}</strong>
+                  <span class="meta-line">{{ .Media }}{{ if .User }} · Requested by {{ .User }}{{ end }}</span>
+                </div>
+                <span class="pill status-pill status-{{ .StatusKey }}">{{ .Status }}</span>
+              </div>
+              <div class="request-progress progress-{{ .StatusKey }}" aria-label="{{ .Status }} request progress"><span></span></div>
+              {{ if .Lifecycle }}
+              <ol class="request-lifecycle" aria-label="Request stages">
+                {{ range .Lifecycle }}
+                <li class="request-lifecycle-step step-{{ .Key }} is-{{ .State }}">{{ .Label }}</li>
+                {{ end }}
+              </ol>
+              {{ end }}
+            </li>
+            {{ end }}
+          </ul>
+          {{ else }}
+          <p class="subtitle">Recent requests are unavailable right now.</p>
+          {{ end }}
+        </section>
+        {{ end }}
+
+        {{ if .SettingsShowQueue }}
+        <section class="panel">
+          <div class="panel-title-row">
+            <h2>Download Queue</h2>
+            <div class="queue-filter" role="group" aria-label="Queue source filter">
+              <button type="button" class="btn secondary queue-filter-btn is-active" data-kind-filter="all">All</button>
+              <button type="button" class="btn secondary queue-filter-btn" data-kind-filter="movie">Movies</button>
+              <button type="button" class="btn secondary queue-filter-btn" data-kind-filter="tv">Shows</button>
+            </div>
+          </div>
+          {{ if .DownloadQueue }}
+          <ul class="stack queue-list" id="download-queue-list">
+            {{ range .DownloadQueue }}
+            <li class="stack-item queue-row" data-kind="{{ .Kind }}" data-source="{{ .Source }}">
+              <div class="queue-main">
+                <div>
+                  <strong>{{ .Title }}</strong>
+                  {{ if .Subtitle }}<span class="meta-line">{{ .Subtitle }}</span>{{ end }}
+                </div>
+                <div class="queue-bar" aria-label="{{ .Progress }} percent complete"><span style="width: {{ .Progress }}%"></span></div>
+              </div>
+              <div class="queue-meta">
+                <span class="queue-kpi queue-progress">{{ .Progress }}%</span>
+                <span class="pill">{{ .Kind }}</span>
+                {{ if .Status }}<span class="pill status-pill">{{ .Status }}</span>{{ end }}
+                {{ if .TimeLeft }}<span class="queue-kpi">{{ .TimeLeft }}</span>{{ end }}
+                {{ if .SizeLeft }}<span class="queue-kpi">{{ .SizeLeft }} left</span>{{ end }}
+              </div>
+            </li>
+            {{ end }}
+          </ul>
+          {{ else }}
+          <p class="subtitle">No active downloads in queue right now.</p>
+          {{ end }}
+        </section>
+        {{ end }}
+      </div>
+    </section>
+  </main>
+  <script src="/static/dashboard.js?v={{ .StaticVersion }}"></script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+.pill {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  padding: 0.14rem 0.5rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.3;
+}
+
+.pill.ok {
+  color: var(--ok);
+  border-color: rgba(159, 190, 168, 0.42);
+  background: rgba(159, 190, 168, 0.08);
+}
+
+.pill.bad {
+  color: var(--bad);
+  border-color: rgba(205, 127, 139, 0.42);
+  background: rgba(205, 127, 139, 0.08);
+}
+
+.status-dot {
+  display: inline-flex;
+  width: 0.62rem;
+  height: 0.62rem;
+  flex: 0 0 auto;
+  border: 1px solid currentcolor;
+  border-radius: 999px;
+  background: currentcolor;
+  box-shadow: 0 0 0 0.18rem rgba(255, 255, 255, 0.035);
+}
+
+.status-dot.ok {
+  color: var(--ok);
+}
+
+.status-dot.bad {
+  color: var(--bad);
+}
+
+.status-dot.neutral {
+  color: var(--faint);
+}
+
+.status-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+}

@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ .AppName }} - Admin</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <main class="app-shell">
+    <div class="topbar">
+      <div class="brand">{{ .AppName }}</div>
+      <div class="topbar-right">
+        <nav class="topnav">
+          <a class="nav-link" href="/dashboard">Dashboard</a>
+          <a class="nav-link active" href="/admin">Overview</a>
+          <a class="nav-link" href="/admin/settings">Settings</a>
+          <a class="nav-link" href="/admin/users">Users</a>
+          <a class="nav-link" href="/admin/logs">Logs</a>
+          <a class="nav-link" href="/admin/playback">Playback</a>
+          <a class="nav-link" href="/admin/integrations">Integrations</a>
+        </nav>
+        <form method="post" action="/logout" class="topbar-logout">
+          <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+          <button class="btn secondary" type="submit">Log out</button>
+        </form>
+      </div>
+    </div>
+
+    <section class="container">
+      <header class="section-head">
+        <div>
+          <p class="eyebrow">Admin</p>
+          <h1 class="page-title">Operations overview</h1>
+          <p class="subtitle">Signed in as {{ .User.DisplayName }}.</p>
+        </div>
+      </header>
+
+      <div class="admin-ops-strip">
+        <div class="ops-metric">
+          <span class="meta-label">Service Health</span>
+          <strong>{{ .AdminOverviewSummary.OnlineServices }}/{{ .AdminOverviewSummary.TotalServices }}</strong>
+          <span class="meta-line">{{ .AdminOverviewSummary.HealthSummary }}</span>
+        </div>
+        <div class="ops-metric">
+          <span class="meta-label">Connectors Ready</span>
+          <strong>{{ .AdminOverviewSummary.ConfiguredServices }}/{{ .AdminOverviewSummary.TotalConnectors }}</strong>
+          <span class="meta-line">Configured with URLs and credentials</span>
+        </div>
+        <div class="ops-metric">
+          <span class="meta-label">Admin Share</span>
+          <strong>{{ .AdminOverviewSummary.AdminShare }}</strong>
+          <span class="meta-line">{{ .AdminUsers }} of {{ .TotalUsers }} users can administer</span>
+        </div>
+        <div class="ops-metric">
+          <span class="meta-label">Latest Activity</span>
+          <strong>{{ .AdminOverviewSummary.LatestActivityAt }}</strong>
+          <span class="meta-line">{{ .RecentLoginCount }} recent sign-ins, {{ .WarningLogCount }} warnings</span>
+        </div>
+      </div>
+
+      <div class="grid admin-overview-grid">
+        <section class="panel admin-action-panel">
+          <div class="panel-title-row">
+            <div>
+              <h2>Action Center</h2>
+              <p class="subtitle">Highest-value checks and the fastest route to resolve them.</p>
+            </div>
+          </div>
+          <ul class="stack action-list">
+            {{ range .AdminActionItems }}
+            <li class="stack-item action-item action-{{ .Severity }}">
+              <div>
+                <strong>{{ .Title }}</strong>
+                <span class="meta-line">{{ .Detail }}</span>
+              </div>
+              <a class="btn secondary" href="{{ .Href }}">Review</a>
+            </li>
+            {{ end }}
+          </ul>
+        </section>
+
+        <div class="admin-column">
+          <section class="panel">
+            <h2>People</h2>
+            <div class="meta-grid admin-summary-grid">
+              <div class="meta-item"><span class="meta-label">Users</span><strong>{{ .TotalUsers }}</strong></div>
+              <div class="meta-item"><span class="meta-label">Admins</span><strong>{{ .AdminUsers }}</strong></div>
+              <div class="meta-item"><span class="meta-label">Standard Users</span><strong>{{ .StandardUsers }}</strong></div>
+              <div class="meta-item"><span class="meta-label">Recent Sign-ins</span><strong>{{ .RecentLoginCount }}</strong></div>
+              <div class="meta-item"><span class="meta-label">Warnings</span><strong class="{{ if gt .WarningLogCount 0 }}warn{{ end }}">{{ .WarningLogCount }}</strong></div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-title-row">
+              <div>
+                <h2>Configuration Posture</h2>
+                <p class="subtitle">{{ .AdminOverviewSummary.ConfigurationStatus }}</p>
+              </div>
+              <a class="btn secondary" href="/admin/settings">Settings</a>
+            </div>
+            {{ if .ConfigWarnings }}
+            <ul class="stack">
+              {{ range .ConfigWarnings }}
+              <li class="stack-item warn">{{ . }}</li>
+              {{ end }}
+            </ul>
+            {{ else }}
+            <p class="subtitle">No warnings detected.</p>
+            {{ end }}
+          </section>
+        </div>
+
+        <div class="admin-column">
+          <section class="panel">
+            <h2>Service Status</h2>
+            <div class="service-status-list">
+              {{ range .AdminStatusRows }}
+              <div class="service-status-row">
+                <span>{{ .Label }}</span>
+                <span class="service-status-value">
+                  {{ if .Severity }}<span class="status-dot {{ .Severity }}" role="img" aria-label="{{ .Label }} {{ .Value }}" title="{{ .Label }} {{ .Value }}"></span>{{ end }}
+                  <strong>{{ .Value }}</strong>
+                </span>
+              </div>
+              {{ end }}
+            </div>
+          </section>
+        </div>
+
+        <section class="panel">
+          <div class="panel-title-row">
+            <h2>Recent Activity</h2>
+            <a class="btn secondary" href="/admin/logs">View all logs</a>
+          </div>
+          {{ if .AuditLogs }}
+          <ul class="stack audit-list">
+            {{ range .AuditLogs }}
+            <li class="stack-item audit-row audit-{{ .Severity }}">
+              <div class="audit-main">
+                <span class="pill">{{ .Category }}</span>
+                <strong>{{ .Message }}</strong>
+                <span class="meta-line">{{ .Detail }}</span>
+              </div>
+              <div class="audit-meta">
+                <span>{{ .CreatedAt }}</span>
+                <span>{{ .IPAddress }}</span>
+              </div>
+            </li>
+            {{ end }}
+          </ul>
+          {{ else }}
+          <p class="subtitle">No recent logs.</p>
+          {{ end }}
+        </section>
+      </div>
+
+    </section>
+  </main>
+</body>
+</html>

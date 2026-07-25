@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ .AppName }} - Admin Logs</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <main class="app-shell">
+    <div class="topbar">
+      <div class="brand">{{ .AppName }}</div>
+      <div class="topbar-right">
+        <nav class="topnav">
+          <a class="nav-link" href="/dashboard">Dashboard</a>
+          <a class="nav-link" href="/admin">Overview</a>
+          <a class="nav-link" href="/admin/settings">Settings</a>
+          <a class="nav-link" href="/admin/users">Users</a>
+          <a class="nav-link active" href="/admin/logs">Logs</a>
+          <a class="nav-link" href="/admin/playback">Playback</a>
+          <a class="nav-link" href="/admin/integrations">Integrations</a>
+        </nav>
+        <form method="post" action="/logout" class="topbar-logout">
+          <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+          <button class="btn secondary" type="submit">Log out</button>
+        </form>
+      </div>
+    </div>
+
+    <section class="container">
+      <header class="section-head">
+        <div>
+          <p class="eyebrow">Admin</p>
+          <h1 class="page-title">Audit logs</h1>
+        </div>
+        <p class="subtitle">Security and operations events for this portal.</p>
+      </header>
+
+      {{ if .AuditLogs }}
+      <ul class="stack audit-list">
+        {{ range .AuditLogs }}
+        <li class="stack-item audit-row audit-{{ .Severity }}">
+          <div class="audit-main">
+            <div class="audit-heading">
+              <span class="pill">{{ .Category }}</span>
+              <strong>{{ .Message }}</strong>
+            </div>
+            <span class="meta-line">{{ .Detail }}</span>
+            <dl class="audit-details">
+              <dt>Actor</dt><dd>{{ .Actor }}</dd>
+              <dt>Action</dt><dd>{{ .Action }}</dd>
+              <dt>Target</dt><dd>{{ .Target }}</dd>
+              {{ if .Metadata }}<dt>Details</dt><dd>{{ .Metadata }}</dd>{{ end }}
+            </dl>
+          </div>
+          <div class="audit-meta">
+            <span>{{ .CreatedAt }}</span>
+            <span>{{ .IPAddress }}</span>
+          </div>
+        </li>
+        {{ end }}
+      </ul>
+      {{ else }}
+      <p class="subtitle">No audit logs yet.</p>
+      {{ end }}
+
+      <div class="actions"><a class="btn secondary" href="/admin">Back</a></div>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ .AppName }} - Admin Settings</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <main class="app-shell">
+    <div class="topbar">
+      <div class="brand">{{ .AppName }}</div>
+      <div class="topbar-right">
+        <nav class="topnav">
+          <a class="nav-link" href="/dashboard">Dashboard</a>
+          <a class="nav-link" href="/admin">Overview</a>
+          <a class="nav-link active" href="/admin/settings">Settings</a>
+          <a class="nav-link" href="/admin/users">Users</a>
+          <a class="nav-link" href="/admin/logs">Logs</a>
+          <a class="nav-link" href="/admin/playback">Playback</a>
+          <a class="nav-link" href="/admin/integrations">Integrations</a>
+        </nav>
+        <form method="post" action="/logout" class="topbar-logout">
+          <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+          <button class="btn secondary" type="submit">Log out</button>
+        </form>
+      </div>
+    </div>
+
+    <section class="container">
+      <header class="section-head">
+        <div>
+          <p class="eyebrow">Admin</p>
+          <h1 class="page-title">Settings</h1>
+        </div>
+        <p class="subtitle">Manage branding, public links, and dashboard widget defaults.</p>
+      </header>
+      {{ if .Success }}<p class="success">{{ .Success }}</p>{{ end }}
+      {{ if .Error }}<p class="error">{{ .Error }}</p>{{ end }}
+
+      <form method="post" action="/admin/settings" class="form">
+        <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+        <div class="grid settings-grid">
+          <section class="panel half settings-panel" id="settings-dashboard">
+            <div class="panel-title-row">
+              <div>
+                <h2>Dashboard</h2>
+                <p class="subtitle">Default widgets and the admin notice.</p>
+              </div>
+            </div>
+            <label>Dashboard Message<textarea name="dashboard_message" rows="3" maxlength="280" placeholder="Service updates, outage notes, announcements...">{{ .DashboardMessage }}</textarea></label>
+          </section>
+
+          <section class="panel half settings-panel" id="settings-widgets">
+            <div class="panel-title-row">
+              <div>
+                <h2>Dashboard Widgets</h2>
+                <p class="subtitle">Choose what appears on the main dashboard.</p>
+              </div>
+            </div>
+            <div class="toggle-grid">
+              <label class="checkline widget-toggle widget-request-bot"><input type="checkbox" name="show_request_bot" {{ if .SettingsShowRequestBot }}checked{{ end }}> Requests</label>
+              <label class="checkline widget-toggle widget-media"><input type="checkbox" name="show_recent_media" {{ if .SettingsShowRecentMedia }}checked{{ end }}> Recently added</label>
+              <label class="checkline widget-toggle widget-calendar"><input type="checkbox" name="show_upcoming_calendar" {{ if .SettingsShowCalendar }}checked{{ end }}> Calendar</label>
+              <label class="checkline widget-toggle widget-requests"><input type="checkbox" name="show_recent_requests" {{ if .SettingsShowRecentReqs }}checked{{ end }}> Recent requests</label>
+              <label class="checkline widget-toggle widget-quota"><input type="checkbox" name="show_request_quota" {{ if .SettingsShowQuota }}checked{{ end }}> Request quota</label>
+              <label class="checkline widget-toggle widget-queue"><input type="checkbox" name="show_download_queue" {{ if .SettingsShowQueue }}checked{{ end }}> Download queue</label>
+            </div>
+          </section>
+
+          <section class="panel half settings-panel" id="settings-branding">
+            <div class="panel-title-row">
+              <div>
+                <h2>Branding</h2>
+                <p class="subtitle">Names and public identity shown around the portal.</p>
+              </div>
+            </div>
+            <div class="form-grid">
+              <label>App Name<input name="app_name" value="{{ .BrandAppName }}"></label>
+              <label>Logo URL<input name="logo_url" value="{{ .BrandLogoURL }}"></label>
+              <label>Accent Color<input name="accent_color" value="{{ .BrandAccent }}"></label>
+            </div>
+          </section>
+
+          <section class="panel half settings-panel" id="settings-links">
+            <div class="panel-title-row">
+              <div>
+                <h2>Dashboard Links</h2>
+                <p class="subtitle">Public destinations used by dashboard buttons.</p>
+              </div>
+            </div>
+            <div class="form-grid">
+              <label>{{ .MediaServerName }} Public URL<input name="media_server_public_url" value="{{ .SettingsMediaServerPublic }}"></label>
+              <label>Seerr Public URL<input name="seerr_public_url" value="{{ .SettingsSeerrPublic }}"></label>
+            </div>
+          </section>
+
+          {{ if .SetupConfigGroups }}
+          <section class="panel settings-panel" id="settings-connections">
+            <div class="panel-title-row">
+              <div>
+                <h2>Service Settings</h2>
+                <p class="subtitle">Setup-wizard service URLs and API keys. Environment-managed values are read-only.</p>
+              </div>
+            </div>
+            <div class="settings-service-grid">
+              {{ range .SetupConfigGroups }}
+              <section class="stack-item settings-service-card">
+                <div class="panel-title-row">
+                  <h3>{{ .Name }}</h3>
+                  <span class="meta-line">{{ len .Fields }} settings</span>
+                </div>
+                <div class="settings-service-fields">
+                  {{ range .Fields }}
+                  <label>
+                    <span>{{ .Label }}</span>
+                    {{ if .Options }}
+                    <select name="{{ .Name }}" {{ if .EnvManaged }}disabled{{ end }}>
+                      {{ range .Options }}
+                      <option value="{{ .Value }}" {{ if .Selected }}selected{{ end }}>{{ .Label }}</option>
+                      {{ end }}
+                    </select>
+                    {{ else if .Secret }}
+                    <input type="password" name="{{ .Name }}" value="" autocomplete="off" {{ if .EnvManaged }}disabled{{ end }} placeholder="{{ if .EnvManaged }}Managed by environment variable{{ else if .HasValue }}Leave blank to keep current key{{ else }}API key{{ end }}">
+                    {{ else }}
+                    <input name="{{ .Name }}" value="{{ .Value }}" {{ if .EnvManaged }}disabled{{ end }} placeholder="{{ if .EnvManaged }}Managed by environment variable{{ end }}">
+                    {{ end }}
+                  </label>
+                  {{ end }}
+                </div>
+              </section>
+              {{ end }}
+            </div>
+          </section>
+          {{ end }}
+        </div>
+
+        <div class="actions">
+          <button class="btn" type="submit">Save Settings</button>
+          <a class="btn secondary" href="/admin">Back</a>
+        </div>
+      </form>
+    </section>
+  </main>
+</body>
+</html>
