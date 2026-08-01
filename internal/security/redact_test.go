@@ -2,6 +2,7 @@ package security
 
 import (
 	"errors"
+	"strings"
 	"testing"
 )
 
@@ -33,5 +34,25 @@ func TestRedactErr(t *testing.T) {
 	}
 	if RedactErr(errors.New("dial tcp timeout")) != "dial tcp timeout" {
 		t.Fatal("non-sensitive message should pass through")
+	}
+}
+
+func TestRedactText(t *testing.T) {
+	in := "request to https://user:pass@example.test?api_key=abc123 used configured-secret"
+	got := RedactText(in, "configured-secret")
+	for _, secret := range []string{"user", "pass", "abc123", "configured-secret"} {
+		if strings.Contains(got, secret) {
+			t.Fatalf("redaction leaked %q in %q", secret, got)
+		}
+	}
+}
+
+func TestRedactURL(t *testing.T) {
+	got := RedactURL("https://user:pass@example.test/api?api_key=abc123&safe=yes")
+	if strings.Contains(got, "user") || strings.Contains(got, "pass") || strings.Contains(got, "abc123") {
+		t.Fatalf("URL redaction leaked credentials: %q", got)
+	}
+	if !strings.Contains(got, "safe=yes") {
+		t.Fatalf("URL redaction removed non-sensitive query value: %q", got)
 	}
 }

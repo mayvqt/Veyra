@@ -11,6 +11,7 @@ import (
 	"github.com/mayvqt/veyra/internal/integrations"
 	"github.com/mayvqt/veyra/internal/integrations/arr"
 	"github.com/mayvqt/veyra/internal/integrations/mediaserver"
+	"github.com/mayvqt/veyra/internal/security"
 	"github.com/mayvqt/veyra/internal/store"
 )
 
@@ -118,7 +119,7 @@ func (h *Handlers) AdminIntegrations(w http.ResponseWriter, r *http.Request) {
 	view := ViewData{AppName: appNameFromSettings(settings, h.cfg.AppName), CSRFToken: middleware.EnsureCSRFToken(w, r, h.cfg.CookieSecure), Now: time.Now(), User: u, MediaServerName: h.cfg.MediaServerType.Label()}
 	view.ServiceStatuses = []ServiceStatus{
 		h.mediaserverServiceStatus(r, now, withDefault(readSettingFromMap(settings, settingMediaServerPublicURL), h.cfg.MediaServerPublicURL), j),
-		{Name: "Seerr", Internal: h.cfg.SeerrURL, Public: withDefault(readSettingFromMap(settings, settingSeerrPublicURL), h.cfg.SeerrPublicURL), Health: integrationHealthStatus(seerrConfigured, s.OK), Configured: seerrConfigured, LastChecked: now.Format(time.RFC3339), LastError: healthErr(s), RecentErrors: combineIntegrationNotes("Configured: "+boolYesNo(seerrConfigured), h.serviceErrorHistory(r, "Seerr", 3))},
+		{Name: "Seerr", Internal: security.RedactURL(h.cfg.SeerrURL), Public: security.RedactURL(withDefault(readSettingFromMap(settings, settingSeerrPublicURL), h.cfg.SeerrPublicURL)), Health: integrationHealthStatus(seerrConfigured, s.OK), Configured: seerrConfigured, LastChecked: now.Format(time.RFC3339), LastError: healthErr(s), RecentErrors: combineIntegrationNotes("Configured: "+boolYesNo(seerrConfigured), h.serviceErrorHistory(r, "Seerr", 3))},
 	}
 	for _, svc := range arrServices {
 		view.ServiceStatuses = append(view.ServiceStatuses, h.arrServiceStatus(r, now, svc, arrHealth[svc.Name]))
@@ -171,8 +172,8 @@ func (h *Handlers) mediaserverServiceStatus(r *http.Request, now time.Time, publ
 	configured := h.mediaServerConfigured()
 	status := ServiceStatus{
 		Name:         name,
-		Internal:     h.cfg.MediaServerURL,
-		Public:       publicURL,
+		Internal:     security.RedactURL(h.cfg.MediaServerURL),
+		Public:       security.RedactURL(publicURL),
 		Health:       integrationHealthStatus(configured, health.OK),
 		Configured:   configured,
 		Required:     true,
@@ -202,7 +203,7 @@ func (h *Handlers) mediaserverServiceStatus(r *http.Request, now time.Time, publ
 func (h *Handlers) arrServiceStatus(r *http.Request, now time.Time, svc arrAdminService, health integrations.HealthStatus) ServiceStatus {
 	status := ServiceStatus{
 		Name:         svc.Name,
-		Internal:     svc.Internal,
+		Internal:     security.RedactURL(svc.Internal),
 		Health:       integrationHealthStatus(svc.Configured, health.OK),
 		Configured:   svc.Configured,
 		Required:     false,

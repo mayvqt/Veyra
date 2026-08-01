@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func New(level string) *slog.Logger {
+func New(level string, secrets ...string) *slog.Logger {
 	lvl := slog.LevelInfo
 	switch strings.ToLower(level) {
 	case "debug":
@@ -18,5 +18,5 @@ func New(level string) *slog.Logger {
 	}
 
 	h := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: lvl})
-	return slog.New(h)
+	return slog.New(newRedactingHandler(h, secrets))
 }

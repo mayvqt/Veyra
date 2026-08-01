@@ -5,12 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/mayvqt/veyra/internal/config"
 	"github.com/mayvqt/veyra/internal/integrations"
 	"github.com/mayvqt/veyra/internal/integrations/seerr"
 	"github.com/mayvqt/veyra/internal/security"
@@ -217,7 +217,7 @@ func (h *Handlers) serviceErrorHistory(r *http.Request, service string, limit in
 		if msg == "" {
 			msg = "unknown error"
 		}
-		out = append(out, row.CreatedAt.Format(time.RFC3339)+" - "+msg)
+		out = append(out, row.CreatedAt.Format(time.RFC3339)+" - "+security.RedactErr(errors.New(msg)))
 	}
 	return out
 }
@@ -250,11 +250,7 @@ func validateSettingsInput(pairs map[string]string) string {
 }
 
 func isValidURL(s string) bool {
-	u, err := url.ParseRequestURI(s)
-	if err != nil {
-		return false
-	}
-	return u.Scheme == "http" || u.Scheme == "https"
+	return config.ValidateHTTPURL(s, false) == nil
 }
 
 func formatSessionTime(t time.Time) string {

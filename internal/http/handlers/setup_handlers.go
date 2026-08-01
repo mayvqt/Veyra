@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -117,7 +116,7 @@ func validateSetupInput(in config.SetupInput) string {
 	if in.AppBaseURL == "" {
 		return "App base URL is required."
 	}
-	if !validSetupURL(in.AppBaseURL) {
+	if config.ValidateHTTPURL(in.AppBaseURL, false) != nil {
 		return "App base URL must be a valid http or https URL."
 	}
 	for _, candidate := range []struct {
@@ -132,7 +131,7 @@ func validateSetupInput(in config.SetupInput) string {
 		{"Radarr URL", in.RadarrURL},
 		{"Prowlarr URL", in.ProwlarrURL},
 	} {
-		if candidate.value != "" && !validSetupURL(candidate.value) {
+		if config.ValidateHTTPURL(candidate.value, true) != nil {
 			return candidate.label + " must be a valid http or https URL."
 		}
 	}
@@ -189,17 +188,4 @@ func mediaServerInputLabel(value string) string {
 		return "Media server"
 	}
 	return serverType.Label()
-}
-
-func validSetupURL(value string) bool {
-	value = strings.TrimSpace(value)
-	if value == "" {
-		return true
-	}
-	value = config.NormalizeHTTPURL(value)
-	u, err := url.Parse(value)
-	if err != nil {
-		return false
-	}
-	return u.Host != "" && (u.Scheme == "http" || u.Scheme == "https")
 }

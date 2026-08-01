@@ -21,8 +21,6 @@ func Run(ctx context.Context) error {
 		return fmt.Errorf("load config: %w", err)
 	}
 
-	log := logging.New(cfg.LogLevel)
-
 	db, err := store.OpenSQLite(cfg.DatabasePath)
 	if err != nil {
 		return fmt.Errorf("open db: %w", err)
@@ -36,6 +34,15 @@ func Run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("apply stored setup: %w", err)
 	}
+	log := logging.New(cfg.LogLevel,
+		cfg.SessionSecret,
+		cfg.EncryptionKey,
+		cfg.MediaServerAPIKey,
+		cfg.SeerrAPIKey,
+		cfg.SonarrAPIKey,
+		cfg.RadarrAPIKey,
+		cfg.ProwlarrAPIKey,
+	)
 	cleanupCtx, stopCleanup := context.WithCancel(ctx)
 	cleanupDone := make(chan struct{})
 	go func() {
@@ -52,13 +59,9 @@ func Run(ctx context.Context) error {
 		return fmt.Errorf("build router: %w", err)
 	}
 
-	mux := http.NewServeMux()
-	mux.Handle("/", r)
-	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("web/static"))))
-
 	srv := &http.Server{
 		Addr:              cfg.AppBindAddr,
-		Handler:           mux,
+		Handler:           r,
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      30 * time.Second,

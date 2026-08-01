@@ -53,3 +53,19 @@ func TestLoadRejectsUnknownMediaServerType(t *testing.T) {
 		t.Fatal("expected unknown media server type to fail")
 	}
 }
+
+func TestLoadRejectsCredentialsAndQueryParametersInServiceURLs(t *testing.T) {
+	for name, value := range map[string]string{
+		"userinfo": "https://api:key@seerr.example.test",
+		"query":    "https://seerr.example.test?api_key=secret",
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv("SESSION_SECRET", "session-secret-with-at-least-32-characters")
+			t.Setenv("ENCRYPTION_KEY", "12345678901234567890123456789012")
+			t.Setenv("SEERR_URL", value)
+			if _, err := Load(); err == nil {
+				t.Fatal("expected credential-bearing URL to fail")
+			}
+		})
+	}
+}
