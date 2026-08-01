@@ -1,3 +1,0 @@
-# AGENTS.md
-
-Keep changes small, cohesive, secure, and idiomatic: inspect relevant code and `git status` first, preserve unrelated work and existing behavior, respect package boundaries, avoid duplication and speculative abstractions, propagate request contexts, validate and bound external input, never log or render secrets or raw internal errors, keep database changes transactional and migration-safe, update matching tests/docs/configuration, avoid committing generated files or credentials, and finish with `gofmt`, `go test ./...`, `go vet ./...`, `go test -race ./...`, `govulncheck ./...`, and `git diff --check`.
