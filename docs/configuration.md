@@ -18,3 +18,5 @@ Environment variables override wizard values. Internal URLs must be container-re
 | `PROWLARR_URL`, `PROWLARR_API_KEY` | Optional indexer and admin data. |
 
 Every configured optional service URL requires its API key.
+
+Service URLs must use HTTP or HTTPS and cannot contain URL userinfo, query parameters, or fragments. Keep credentials in the dedicated API key variables; this prevents them from being copied into request logs, diagnostics, browser pages, or `Referer` headers.

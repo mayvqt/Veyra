@@ -110,7 +110,11 @@ func ApplyStoredSetup(ctx context.Context, db *sql.DB, cfg Config) (Config, erro
 	applyStoredString(&cfg.RadarrAPIKey, values[settingRadarrAPIKey], settingRadarrAPIKey)
 	applyStoredString(&cfg.ProwlarrURL, values[settingProwlarrURL], settingProwlarrURL)
 	applyStoredString(&cfg.ProwlarrAPIKey, values[settingProwlarrAPIKey], settingProwlarrAPIKey)
-	return NormalizeURLs(cfg), nil
+	cfg = NormalizeURLs(cfg)
+	if err := ValidateURLs(cfg); err != nil {
+		return Config{}, err
+	}
+	return cfg, nil
 }
 
 func StoredSetup(ctx context.Context, db *sql.DB, crypto *security.Crypto) (SetupInput, map[string]bool, error) {

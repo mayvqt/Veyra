@@ -56,21 +56,8 @@ func NewClient(serverType config.MediaServerType, baseURL, publicURL, apiKey str
 }
 
 func validateServerURL(label, value string) error {
-	if value == "" {
-		return nil
-	}
-	parsed, err := url.Parse(value)
-	if err != nil {
+	if err := config.ValidateHTTPURL(value, true); err != nil {
 		return fmt.Errorf("invalid media server %s: %w", label, err)
-	}
-	if (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" {
-		return fmt.Errorf("invalid media server %s: must be an http or https URL", label)
-	}
-	if parsed.User != nil {
-		return fmt.Errorf("invalid media server %s: credentials are not allowed", label)
-	}
-	if parsed.RawQuery != "" || parsed.Fragment != "" {
-		return fmt.Errorf("invalid media server %s: query parameters and fragments are not allowed", label)
 	}
 	return nil
 }

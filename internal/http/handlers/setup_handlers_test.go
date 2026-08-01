@@ -74,6 +74,20 @@ func TestSetupPostRejectsUnsafeURLSchemes(t *testing.T) {
 	}
 }
 
+func TestSetupValidationRejectsCredentialsInConnectorURLs(t *testing.T) {
+	in := config.SetupInput{
+		AppBaseURL:        "https://veyra.home.test",
+		MediaServerType:   config.MediaServerJellyfin.String(),
+		MediaServerURL:    "http://mediaserver:8096",
+		MediaServerAPIKey: "jf-secret",
+		SeerrURL:          "https://user:password@seerr.home.test?api_key=leaked",
+		SeerrAPIKey:       "seerr-secret",
+	}
+	if msg := validateSetupInput(in); !strings.Contains(msg, "Seerr internal URL") {
+		t.Fatalf("expected credential-bearing connector URL to fail, got %q", msg)
+	}
+}
+
 func TestSetupPostStoresEncryptedSettingsAndRestarts(t *testing.T) {
 	h, db := mkHandlers(t)
 	defer db.Close()

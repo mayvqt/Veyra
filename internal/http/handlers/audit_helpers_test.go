@@ -53,3 +53,17 @@ func TestAuditLogViewShowsAttemptedUsernameForLoginFailure(t *testing.T) {
 		t.Fatalf("unexpected login failure detail: %+v", view)
 	}
 }
+
+func TestAuditLogViewRedactsLegacySensitiveMetadata(t *testing.T) {
+	row := store.AuditLogRow{
+		Action:    "service.health.failure",
+		Target:    sql.NullString{String: "Seerr", Valid: true},
+		Metadata:  sql.NullString{String: auditMetadata(map[string]string{"error": "request failed with api_key=legacy-secret"}), Valid: true},
+		CreatedAt: time.Now(),
+	}
+
+	view := auditLogView(row)
+	if strings.Contains(view.Metadata, "legacy-secret") || strings.Contains(view.Detail, "legacy-secret") {
+		t.Fatalf("audit view leaked sensitive metadata: %+v", view)
+	}
+}

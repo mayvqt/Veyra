@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"net"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -84,7 +85,11 @@ func Load() (Config, error) {
 	if cfg.LogLevel != "debug" && cfg.LogLevel != "info" && cfg.LogLevel != "warn" && cfg.LogLevel != "error" {
 		return Config{}, fmt.Errorf("invalid LOG_LEVEL %q", cfg.LogLevel)
 	}
-	return NormalizeURLs(cfg), nil
+	cfg = NormalizeURLs(cfg)
+	if err := ValidateURLs(cfg); err != nil {
+		return Config{}, err
+	}
+	return cfg, nil
 }
 
 type MediaServerType string
@@ -177,6 +182,51 @@ func NormalizeURLs(cfg Config) Config {
 
 func NormalizeHTTPURL(value string) string {
 	return normalizeHTTPURL(value)
+}
+
+// ValidateHTTPURL accepts only credential-free HTTP(S) service URLs. Query
+// parameters and fragments are forbidden because they are commonly copied to
+// logs, diagnostics, Referer headers, and administrative pages.
+func ValidateHTTPURL(value string, allowEmpty bool) error {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		if allowEmpty {
+			return nil
+		}
+		return fmt.Errorf("URL is required")
+	}
+	u, err := url.Parse(value)
+	if err != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") {
+		return fmt.Errorf("must be a valid http or https URL")
+	}
+	if u.User != nil {
+		return fmt.Errorf("URL credentials are not allowed")
+	}
+	if u.RawQuery != "" || u.Fragment != "" {
+		return fmt.Errorf("URL query parameters and fragments are not allowed")
+	}
+	return nil
+}
+
+func ValidateURLs(cfg Config) error {
+	for _, candidate := range []struct {
+		name  string
+		value string
+	}{
+		{"APP_BASE_URL", cfg.AppBaseURL},
+		{"MEDIA_SERVER_URL", cfg.MediaServerURL},
+		{"MEDIA_SERVER_PUBLIC_URL", cfg.MediaServerPublicURL},
+		{"SEERR_URL", cfg.SeerrURL},
+		{"SEERR_PUBLIC_URL", cfg.SeerrPublicURL},
+		{"SONARR_URL", cfg.SonarrURL},
+		{"RADARR_URL", cfg.RadarrURL},
+		{"PROWLARR_URL", cfg.ProwlarrURL},
+	} {
+		if err := ValidateHTTPURL(candidate.value, true); err != nil {
+			return fmt.Errorf("invalid %s: %w", candidate.name, err)
+		}
+	}
+	return nil
 }
 
 func normalizeHTTPURL(value string) string {

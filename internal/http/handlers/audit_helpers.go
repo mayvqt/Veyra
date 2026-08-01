@@ -2,10 +2,12 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/mayvqt/veyra/internal/security"
 	"github.com/mayvqt/veyra/internal/store"
 )
 
@@ -165,10 +167,22 @@ func auditMetadataMap(raw string) map[string]string {
 		return out
 	}
 	if err := json.Unmarshal([]byte(raw), &out); err == nil {
+		for key, value := range out {
+			out[key] = redactAuditValue(key, value)
+		}
 		return out
 	}
-	out["message"] = raw
+	out["message"] = redactAuditValue("message", raw)
 	return out
+}
+
+func redactAuditValue(key, value string) string {
+	switch key {
+	case "message", "error":
+		return security.RedactErr(errors.New(value))
+	default:
+		return security.RedactText(value)
+	}
 }
 
 func auditMetadataSummary(fields map[string]string) string {
