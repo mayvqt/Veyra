@@ -286,13 +286,13 @@ type quotaDisplay struct {
 func quotaMeters(q seerr.Quota) []QuotaMeter {
 	meters := make([]QuotaMeter, 0, 2)
 	if q.MovieUnlimited {
-		meters = append(meters, QuotaMeter{Label: "Movies", Value: "Unlimited", Detail: "No limit", Class: "ok", Percent: 100})
+		meters = append(meters, QuotaMeter{Label: "Movies", Value: "Unlimited", Detail: "No request limit", Class: "ok", Unlimited: true})
 	} else if q.MovieLimit > 0 {
 		meters = append(meters, quotaMeter("Movies", q.MovieRemaining, q.MovieLimit, q.MovieUsed))
 	}
 
 	if q.SeriesUnlimited {
-		meters = append(meters, QuotaMeter{Label: "Series", Value: "Unlimited", Detail: "No limit", Class: "ok", Percent: 100})
+		meters = append(meters, QuotaMeter{Label: "Series", Value: "Unlimited", Detail: "No request limit", Class: "ok", Unlimited: true})
 	} else if q.SeriesLimit > 0 {
 		meters = append(meters, quotaMeter("Series", q.SeriesRemaining, q.SeriesLimit, q.SeriesUsed))
 	}
@@ -302,8 +302,8 @@ func quotaMeters(q seerr.Quota) []QuotaMeter {
 func quotaMeter(label string, remaining, limit, used int) QuotaMeter {
 	meter := QuotaMeter{
 		Label:   label,
-		Value:   fmt.Sprintf("%d/%d left", remaining, limit),
-		Detail:  fmt.Sprintf("%d used", used),
+		Value:   fmt.Sprintf("%d remaining", remaining),
+		Detail:  fmt.Sprintf("%d used of %d", used, limit),
 		Class:   "ok",
 		Percent: quotaRemainingPercent(remaining, limit),
 	}

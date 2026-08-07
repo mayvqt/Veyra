@@ -14,7 +14,7 @@
         <nav class="topnav">
           <a class="nav-link" href="/dashboard">Dashboard</a>
           <a class="nav-link active" href="/guide">Guide</a>
-          {{ if .User.IsAdmin }}<a class="nav-link" href="/admin">Admin</a>{{ end }}
+          {{ if .User.IsAdmin }}<a class="nav-link admin-nav-link" href="/admin">Admin</a>{{ end }}
         </nav>
         <form method="post" action="/logout" class="topbar-logout">
           <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">

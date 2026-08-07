@@ -14,7 +14,7 @@
         <nav class="topnav">
           <a class="nav-link active" href="/dashboard">Dashboard</a>
           <a class="nav-link" href="/guide">Guide</a>
-          {{ if .User.IsAdmin }}<a class="nav-link" href="/admin">Admin</a>{{ end }}
+          {{ if .User.IsAdmin }}<a class="nav-link admin-nav-link" href="/admin">Admin</a>{{ end }}
         </nav>
         <form method="post" action="/logout" class="topbar-logout">
           <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
@@ -41,10 +41,10 @@
       <section class="panel request-bot" data-seerr-request-bot>
         <div class="request-bot-head">
           <div>
-            <h2>Requests</h2>
-            <p class="subtitle">Movies and shows</p>
+            <h2>Request Media</h2>
+            <p class="subtitle">Search movies and shows on Seerr</p>
           </div>
-          <span class="status-dot {{ if eq .SeerrStatus "Online" }}ok{{ else }}bad{{ end }}" role="img" aria-label="Seerr {{ .SeerrStatus }}" title="Seerr {{ .SeerrStatus }}"></span>
+          <span class="status-inline service-health"><span class="status-dot {{ if eq .SeerrStatus "Online" }}ok{{ else }}bad{{ end }}" role="img" aria-label="Seerr {{ .SeerrStatus }}"></span><span>Seerr {{ .SeerrStatus }}</span></span>
         </div>
         <form class="request-bot-search" data-seerr-search-form>
           <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}" data-seerr-csrf>
@@ -61,23 +61,21 @@
 
       {{ if .DashboardServices }}
       <section class="panel services-panel" aria-labelledby="media-services-title">
-        <div class="panel-title-row quota-title-row">
+        <div class="panel-title-row service-title-row">
           <div>
-            <h2 id="media-services-title">Media Services</h2>
-            <p class="subtitle">Watch and request</p>
+            <h2 id="media-services-title">Quick Links</h2>
+            <p class="subtitle">Open your connected media services</p>
           </div>
         </div>
-        <div class="quota-meter-grid">
+        <div class="service-link-grid">
           {{ range .DashboardServices }}
-          <article class="quota-meter">
-            <div class="quota-meter-head">
-              <div>
-                <strong>{{ .Name }}</strong>
-              </div>
+          <a class="service-link" href="{{ .URL }}" target="_blank" rel="noopener noreferrer">
+            <span class="service-link-name">
               <span class="status-dot {{ if eq .Status "Online" }}ok{{ else }}bad{{ end }}" role="img" aria-label="{{ .Name }} {{ .Status }}" title="{{ .Name }} {{ .Status }}"></span>
-            </div>
-            <a class="btn service-action" href="{{ .URL }}" target="_blank" rel="noopener noreferrer">Open {{ .Name }} <span aria-hidden="true">&nearr;</span></a>
-          </article>
+              <strong>{{ .Name }}</strong>
+            </span>
+            <span class="service-link-open">Open <span aria-hidden="true">&nearr;</span></span>
+          </a>
           {{ end }}
         </div>
       </section>
@@ -89,9 +87,8 @@
           <div class="panel-title-row quota-title-row">
             <div>
               <h2>Request Quota</h2>
-              {{ if .QuotaValue }}<p class="subtitle">{{ .QuotaValue }}</p>{{ end }}
+              <p class="subtitle">Requests available to you</p>
             </div>
-            <span class="status-inline"><span class="status-dot {{ if eq .SeerrStatus "Online" }}ok{{ else }}bad{{ end }}" role="img" aria-label="Seerr {{ .SeerrStatus }}" title="Seerr {{ .SeerrStatus }}"></span></span>
           </div>
           {{ if .QuotaMeters }}
           <div class="quota-meter-grid">
@@ -104,14 +101,11 @@
                 </div>
                 <span class="pill quota-pill quota-{{ .Class }}">{{ .Value }}</span>
               </div>
+              {{ if not .Unlimited }}
               <div class="quota-meter-track" aria-label="{{ .Label }} request quota remaining">
                 <span style="width: {{ .Percent }}%"></span>
               </div>
-              <div class="quota-meter-steps" aria-hidden="true">
-                <span>Used</span>
-                <span>Remaining</span>
-                <span>Limit</span>
-              </div>
+              {{ end }}
             </article>
             {{ end }}
           </div>

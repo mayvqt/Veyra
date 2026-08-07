@@ -42,8 +42,8 @@ func TestDashboardTemplateLabelsRequestPanel(t *testing.T) {
 		t.Fatalf("want 200 got %d", w.Code)
 	}
 	body := w.Body.String()
-	if !strings.Contains(body, ">Requests<") {
-		t.Fatal("expected dashboard request panel to be labeled Requests")
+	if !strings.Contains(body, ">Request Media<") {
+		t.Fatal("expected dashboard request panel to be labeled Request Media")
 	}
 	if strings.Contains(body, "Request Bot") {
 		t.Fatal("dashboard should not use old Request Bot label")
@@ -79,11 +79,11 @@ func TestDashboardTemplateRendersServicesPanelBelowRequestPanel(t *testing.T) {
 	for _, want := range []string{
 		`/static/app.css?v=test-version`,
 		`class="panel services-panel" aria-labelledby="media-services-title"`,
-		`id="media-services-title">Media Services`,
+		`id="media-services-title">Quick Links`,
 		`aria-label="Jellyfin Online"`,
 		`aria-label="Seerr Offline"`,
-		`class="btn service-action" href="https://media.example.com" target="_blank" rel="noopener noreferrer">Open Jellyfin`,
-		`class="btn service-action" href="https://requests.example.com" target="_blank" rel="noopener noreferrer">Open Seerr`,
+		`class="service-link" href="https://media.example.com" target="_blank" rel="noopener noreferrer"`,
+		`class="service-link" href="https://requests.example.com" target="_blank" rel="noopener noreferrer"`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("expected dashboard services panel to contain %q", want)
@@ -229,10 +229,10 @@ func TestDashboardTemplateRendersHealthDots(t *testing.T) {
 	defer db.Close()
 
 	view := ViewData{
-		AppName:           "Veyra",
-		MediaServerStatus: "Online",
-		SeerrStatus:       "Offline",
-		SettingsShowQuota: true,
+		AppName:                "Veyra",
+		MediaServerStatus:      "Online",
+		SeerrStatus:            "Offline",
+		SettingsShowRequestBot: true,
 	}
 
 	w := httptest.NewRecorder()
@@ -241,16 +241,10 @@ func TestDashboardTemplateRendersHealthDots(t *testing.T) {
 		t.Fatalf("want 200 got %d", w.Code)
 	}
 	body := w.Body.String()
-	for _, want := range []string{
-		`class="status-dot bad" role="img" aria-label="Seerr Offline"`,
-		`class="status-inline"><span class="status-dot bad"`,
-	} {
+	for _, want := range []string{`class="status-dot bad" role="img" aria-label="Seerr Offline"`, `>Seerr Offline</span>`} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("expected dashboard health dot markup to contain %q", want)
 		}
-	}
-	if strings.Contains(body, `>Seerr Offline</span>`) {
-		t.Fatal("expected quota health status to use dot markup instead of visible status text")
 	}
 }
 
@@ -330,8 +324,8 @@ func TestDashboardTemplateRendersQuotaMeters(t *testing.T) {
 		SettingsShowQuota: true,
 		QuotaValue:        "Movies: 3/5 remaining · Series: unlimited",
 		QuotaMeters: []QuotaMeter{
-			{Label: "Movies", Value: "3/5 left", Detail: "2 used", Class: "warn", Percent: 60},
-			{Label: "Series", Value: "Unlimited", Detail: "No limit", Class: "ok", Percent: 100},
+			{Label: "Movies", Value: "3 remaining", Detail: "2 used of 5", Class: "warn", Percent: 60},
+			{Label: "Series", Value: "Unlimited", Detail: "No request limit", Class: "ok", Unlimited: true},
 		},
 	}
 
@@ -346,10 +340,13 @@ func TestDashboardTemplateRendersQuotaMeters(t *testing.T) {
 		`class="quota-meter quota-meter-warn"`,
 		`style="width: 60%"`,
 		`class="quota-meter quota-meter-ok"`,
-		`style="width: 100%"`,
+		`No request limit`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("expected dashboard quota meters to contain %q", want)
 		}
+	}
+	if strings.Contains(body, `style="width: 100%"`) {
+		t.Fatal("unlimited quota should not render a misleading progress meter")
 	}
 }

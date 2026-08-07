@@ -168,11 +168,12 @@ type SetupConfigGroup struct {
 }
 
 type QuotaMeter struct {
-	Label   string
-	Value   string
-	Detail  string
-	Class   string
-	Percent int
+	Label     string
+	Value     string
+	Detail    string
+	Class     string
+	Percent   int
+	Unlimited bool
 }
 
 type DashboardService struct {

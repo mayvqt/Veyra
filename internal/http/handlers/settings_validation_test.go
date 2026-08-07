@@ -87,16 +87,16 @@ func TestQuotaViewValuesIncludeMeterData(t *testing.T) {
 		t.Fatalf("expected two quota meters, got %+v", display.Meters)
 	}
 	movie := display.Meters[0]
-	if movie.Value != "2/5 left" || movie.Class != "warn" || movie.Detail != "3 used" || movie.Percent != 40 {
+	if movie.Value != "2 remaining" || movie.Class != "warn" || movie.Detail != "3 used of 5" || movie.Percent != 40 {
 		t.Fatalf("unexpected movie quota display: %+v", movie)
 	}
 	series := display.Meters[1]
-	if series.Value != "0/4 left" || series.Class != "bad" || series.Detail != "4 used" || series.Percent != 0 {
+	if series.Value != "0 remaining" || series.Class != "bad" || series.Detail != "4 used of 4" || series.Percent != 0 {
 		t.Fatalf("unexpected series quota display: %+v", series)
 	}
 }
 
-func TestQuotaViewValuesUnlimitedMeterIsFull(t *testing.T) {
+func TestQuotaViewValuesUnlimitedMeterHasNoProgress(t *testing.T) {
 	display := quotaViewValues(seerr.Quota{
 		MovieUnlimited:  true,
 		SeriesUnlimited: true,
@@ -106,7 +106,7 @@ func TestQuotaViewValuesUnlimitedMeterIsFull(t *testing.T) {
 		t.Fatalf("expected two quota meters, got %+v", display.Meters)
 	}
 	for _, meter := range display.Meters {
-		if meter.Value != "Unlimited" || meter.Class != "ok" || meter.Percent != 100 || meter.Detail != "No limit" {
+		if meter.Value != "Unlimited" || meter.Class != "ok" || meter.Percent != 0 || meter.Detail != "No request limit" || !meter.Unlimited {
 			t.Fatalf("unexpected unlimited quota meter state: %+v", meter)
 		}
 	}

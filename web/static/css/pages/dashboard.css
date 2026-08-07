@@ -9,9 +9,44 @@
   margin-bottom: var(--space-4);
 }
 
-.service-action {
-  width: 100%;
-  margin-top: auto;
+.service-title-row {
+  margin-bottom: var(--space-2);
+}
+
+.service-link-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.service-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.025);
+  padding: 0.72rem 0.82rem;
+  color: var(--text);
+}
+
+.service-link:hover {
+  border-color: rgba(126, 167, 197, 0.34);
+  background: rgba(126, 167, 197, 0.08);
+}
+
+.service-link-name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.service-link-open,
+.service-health {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
 }
 
 .quota-value {
@@ -65,7 +100,7 @@
 
 .quota-meter {
   display: grid;
-  gap: var(--space-3);
+  gap: var(--space-2);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.025);
@@ -96,7 +131,7 @@
 }
 
 .quota-meter-track {
-  height: 0.5rem;
+  height: 0.32rem;
   overflow: hidden;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.055);
@@ -117,16 +152,6 @@
 
 .quota-meter-bad .quota-meter-track span {
   background: linear-gradient(90deg, rgba(205, 127, 139, 0.95), rgba(205, 127, 139, 0.58));
-}
-
-.quota-meter-steps {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  color: var(--accent-strong);
-  font-size: 0.7rem;
-  font-weight: 750;
 }
 
 .media-grid {
@@ -891,23 +916,24 @@
   opacity: 0.62;
 }
 .admin-message {
-  border-color: rgba(205, 127, 139, 0.42);
-  background: rgba(205, 127, 139, 0.1);
+  border-color: rgba(203, 185, 245, 0.36);
+  background: rgba(203, 185, 245, 0.09);
   text-align: center;
   margin-bottom: var(--space-3);
 }
 
 .admin-message h2 {
-  color: #d8a2ad;
+  color: var(--admin);
 }
 
 .admin-message p {
   margin: 0;
-  color: #e6c7cd;
+  color: #ddd3f4;
 }
 
 @media (max-width: 759px) {
-  .quota-meter-grid {
+  .quota-meter-grid,
+  .service-link-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 

@@ -97,15 +97,24 @@
 }
 
 .role-admin {
-  color: #d8e0ea;
-  border-color: rgba(184, 194, 216, 0.34);
-  background: rgba(184, 194, 216, 0.09);
+  color: var(--admin);
+  border-color: rgba(203, 185, 245, 0.4);
+  background: rgba(203, 185, 245, 0.11);
 }
 
 .role-user {
   color: #cae0ed;
   border-color: rgba(126, 167, 197, 0.34);
   background: rgba(126, 167, 197, 0.08);
+}
+
+.nav-link.admin-nav-link {
+  color: var(--admin);
+}
+
+.nav-link.admin-nav-link:hover {
+  border-color: rgba(203, 185, 245, 0.34);
+  background: rgba(203, 185, 245, 0.09);
 }
 
 .subtitle {
