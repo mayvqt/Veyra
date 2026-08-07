@@ -26,7 +26,7 @@ func NewClient(baseURL, publicURL, apiKey string) *Client {
 		baseURL:   strings.TrimRight(baseURL, "/"),
 		publicURL: strings.TrimRight(publicURL, "/"),
 		apiKey:    strings.TrimSpace(apiKey),
-		http:      &http.Client{Timeout: 10 * time.Second},
+		http:      integrations.NewHTTPClient(10 * time.Second),
 	}
 }
 

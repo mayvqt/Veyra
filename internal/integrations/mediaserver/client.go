@@ -51,7 +51,7 @@ func NewClient(serverType config.MediaServerType, baseURL, publicURL, apiKey str
 		baseURL:   baseURL,
 		publicURL: publicURL,
 		apiKey:    strings.TrimSpace(apiKey),
-		http:      &http.Client{Timeout: 10 * time.Second},
+		http:      integrations.NewHTTPClient(10 * time.Second),
 	}, nil
 }
 

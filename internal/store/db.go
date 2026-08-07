@@ -39,7 +39,20 @@ func OpenSQLite(path string) (*sql.DB, error) {
 		return nil, fmt.Errorf("set temp_store: %w", err)
 	}
 	db.SetMaxOpenConns(1)
+	if err := restrictDatabaseFiles(path); err != nil {
+		db.Close()
+		return nil, err
+	}
 	return db, nil
+}
+
+func restrictDatabaseFiles(path string) error {
+	for _, candidate := range []string{path, path + "-wal", path + "-shm"} {
+		if err := os.Chmod(candidate, 0o600); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("restrict database file %s: %w", candidate, err)
+		}
+	}
+	return nil
 }
 
 func InitSchema(ctx context.Context, db *sql.DB) error {

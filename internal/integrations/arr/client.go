@@ -33,7 +33,7 @@ func NewProwlarrClient(baseURL, apiKey string) *Client {
 }
 
 func newClient(name, baseURL, apiKey, apiBase string) *Client {
-	return &Client{name: name, baseURL: strings.TrimRight(normalizeBaseURL(baseURL), "/"), apiKey: apiKey, apiBase: apiBase, http: &http.Client{Timeout: 10 * time.Second}}
+	return &Client{name: name, baseURL: strings.TrimRight(normalizeBaseURL(baseURL), "/"), apiKey: apiKey, apiBase: apiBase, http: integrations.NewHTTPClient(10 * time.Second)}
 }
 
 func normalizeBaseURL(value string) string {
