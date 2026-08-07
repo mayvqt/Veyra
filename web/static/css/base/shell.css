@@ -98,8 +98,8 @@
 
 .role-admin {
   color: var(--admin);
-  border-color: rgba(203, 185, 245, 0.4);
-  background: rgba(203, 185, 245, 0.11);
+  border-color: rgba(var(--admin-rgb), 0.4);
+  background: rgba(var(--admin-rgb), 0.11);
 }
 
 .role-user {
@@ -113,8 +113,8 @@
 }
 
 .nav-link.admin-nav-link:hover {
-  border-color: rgba(203, 185, 245, 0.34);
-  background: rgba(203, 185, 245, 0.09);
+  border-color: rgba(var(--admin-rgb), 0.34);
+  background: rgba(var(--admin-rgb), 0.09);
 }
 
 .subtitle {

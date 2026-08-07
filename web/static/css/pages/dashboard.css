@@ -332,12 +332,6 @@
   --progress-end: rgba(143, 181, 156, 0.68);
 }
 
-.request-progress.progress-available {
-  --progress-fill: 100%;
-  --progress-start: rgba(143, 181, 156, 0.95);
-  --progress-end: rgba(143, 181, 156, 0.72);
-}
-
 .request-progress.progress-declined,
 .request-progress.progress-failed {
   --progress-fill: 100%;
@@ -916,8 +910,8 @@
   opacity: 0.62;
 }
 .admin-message {
-  border-color: rgba(203, 185, 245, 0.36);
-  background: rgba(203, 185, 245, 0.09);
+  border-color: rgba(var(--admin-rgb), 0.36);
+  background: rgba(var(--admin-rgb), 0.09);
   text-align: center;
   margin-bottom: var(--space-3);
 }
