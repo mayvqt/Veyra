@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -77,10 +78,17 @@ func (h *Handlers) AdminUsers(w http.ResponseWriter, r *http.Request) {
 		if row.LastLoginAt.Valid {
 			lastLogin = row.LastLoginAt.Time.Format(time.RFC3339)
 		}
-		view.Users = append(view.Users, AdminUserView{Username: row.Username, DisplayName: row.DisplayName, MediaServerUserID: row.MediaServerUserID, IsAdmin: row.IsAdmin, CreatedAt: row.CreatedAt.Format(time.RFC3339), LastLoginAt: lastLogin})
+		view.Users = append(view.Users, AdminUserView{Username: row.Username, DisplayName: row.DisplayName, MediaServerUserID: row.MediaServerUserID, MediaServerURL: mediaServerUserURL(h.cfg.MediaServerPublicURL, row.MediaServerUserID), IsAdmin: row.IsAdmin, CreatedAt: row.CreatedAt.Format(time.RFC3339), LastLoginAt: lastLogin})
 	}
 	view.StandardUsers = view.TotalUsers - view.AdminUsers
 	h.render(w, "admin_users.html", view)
+}
+
+func mediaServerUserURL(baseURL, userID string) string {
+	if baseURL == "" || userID == "" {
+		return ""
+	}
+	return strings.TrimRight(baseURL, "/") + "/web/index.html#!/users/user?userId=" + url.QueryEscape(userID)
 }
 
 func (h *Handlers) AdminLogs(w http.ResponseWriter, r *http.Request) {

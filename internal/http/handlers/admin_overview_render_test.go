@@ -70,3 +70,14 @@ func TestAdminUsersRendersSummaryAndEmptyState(t *testing.T) {
 		}
 	}
 }
+
+func TestMediaServerUserURL(t *testing.T) {
+	got := mediaServerUserURL("https://media.example/", "user/id")
+	want := "https://media.example/web/index.html#!/users/user?userId=user%2Fid"
+	if got != want {
+		t.Fatalf("want %q got %q", want, got)
+	}
+	if mediaServerUserURL("", "user-id") != "" {
+		t.Fatal("expected no link without a public media server URL")
+	}
+}

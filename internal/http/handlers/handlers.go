@@ -112,6 +112,7 @@ type AdminUserView struct {
 	Username          string
 	DisplayName       string
 	MediaServerUserID string
+	MediaServerURL    string
 	IsAdmin           bool
 	CreatedAt         string
 	LastLoginAt       string

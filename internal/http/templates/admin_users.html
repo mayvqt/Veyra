@@ -56,7 +56,10 @@
                 <strong>{{ .Username }}</strong>
                 {{ if .DisplayName }}<span class="meta-line">{{ .DisplayName }}</span>{{ end }}
               </div>
-              <span class="pill role-pill {{ if .IsAdmin }}role-admin-pill{{ else }}role-user-pill{{ end }}">{{ if .IsAdmin }}Admin{{ else }}User{{ end }}</span>
+              <div class="user-actions">
+                <span class="pill role-pill {{ if .IsAdmin }}role-admin-pill{{ else }}role-user-pill{{ end }}">{{ if .IsAdmin }}Admin{{ else }}User{{ end }}</span>
+                {{ if .MediaServerURL }}<a class="btn secondary user-server-link" href="{{ .MediaServerURL }}" target="_blank" rel="noopener">Open in {{ $.MediaServerName }}</a>{{ end }}
+              </div>
             </div>
             <dl class="kv">
               <dt>{{ $.MediaServerName }} User ID</dt><dd>{{ .MediaServerUserID }}</dd>
