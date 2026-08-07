@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+const maxLoginRateLimiterEntries = 10_000
+
 type bucket struct {
 	count int
 	reset time.Time
@@ -19,6 +21,7 @@ type LoginRateLimiter struct {
 	byUser       map[string]bucket
 	calls        uint64
 	cleanupEvery uint64
+	maxEntries   int
 }
 
 func NewLoginRateLimiter(max int, window time.Duration) *LoginRateLimiter {
@@ -28,6 +31,7 @@ func NewLoginRateLimiter(max int, window time.Duration) *LoginRateLimiter {
 		byIP:         map[string]bucket{},
 		byUser:       map[string]bucket{},
 		cleanupEvery: 256,
+		maxEntries:   maxLoginRateLimiterEntries,
 	}
 }
 
@@ -40,12 +44,18 @@ func (l *LoginRateLimiter) Allow(ip, username string) bool {
 		pruneExpiredBuckets(l.byIP, now)
 		pruneExpiredBuckets(l.byUser, now)
 	}
-	if !allowKey(l.byIP, ip, now, l.window, l.max) {
-		return false
-	}
 	username = strings.ToLower(strings.TrimSpace(username))
 	if username == "" {
 		username = "_"
+	}
+	if _, exists := l.byIP[ip]; !exists && len(l.byIP) >= l.maxEntries {
+		return false
+	}
+	if _, exists := l.byUser[username]; !exists && len(l.byUser) >= l.maxEntries {
+		return false
+	}
+	if !allowKey(l.byIP, ip, now, l.window, l.max) {
+		return false
 	}
 	if !allowKey(l.byUser, username, now, l.window, l.max) {
 		return false

@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"net/http/httptest"
 	"testing"
 	"time"
@@ -10,6 +11,46 @@ import (
 	"github.com/mayvqt/veyra/internal/security"
 	"github.com/mayvqt/veyra/internal/store"
 )
+
+func TestResolveSessionFailsClosedWhenAdminRefreshFails(t *testing.T) {
+	db := testDB(t)
+	defer db.Close()
+	urow, err := store.UpsertUserByMediaServerID(context.Background(), db, store.UserRow{MediaServerUserID: "jf-fail-closed", Username: "admin", IsAdmin: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	checker := &checkerStub{err: errors.New("media server unavailable")}
+	svc := NewService(db, security.NewCrypto("12345678901234567890123456789012"), testSessionSecret, checker)
+	raw, err := svc.CreateSession(context.Background(), User{ID: urow.ID, MediaServerUserID: urow.MediaServerUserID, Username: urow.Username, IsAdmin: true}, "tok", httptest.NewRequest("GET", "/", nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	idHash := security.HashSessionID(testSessionSecret, raw)
+	if err := store.UpdateSessionAdminCheckedAt(context.Background(), db, idHash, time.Now().Add(-16*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+
+	_, user, err := svc.ResolveSession(context.Background(), raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if user.IsAdmin {
+		t.Fatal("cached administrator access remained active after refresh failure")
+	}
+	if checker.calls != 1 {
+		t.Fatalf("admin checker calls = %d, want 1", checker.calls)
+	}
+	_, storedUser, err := svc.ResolveSession(context.Background(), raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if storedUser.IsAdmin {
+		t.Fatal("fail-closed administrator state was not persisted")
+	}
+	if checker.calls != 1 {
+		t.Fatalf("admin checker calls = %d, want throttled at 1", checker.calls)
+	}
+}
 
 const testSessionSecret = "session-secret-with-at-least-32-characters"
 

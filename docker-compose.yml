@@ -4,6 +4,11 @@ services:
     build: .
     container_name: veyra
     restart: unless-stopped
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
     ports:
       - "3767:3767"
     env_file:

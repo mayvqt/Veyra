@@ -47,3 +47,17 @@ func TestLoginRateLimiterPrunesExpiredEntries(t *testing.T) {
 		t.Fatal("expected expired username bucket to be pruned")
 	}
 }
+
+func TestLoginRateLimiterBoundsHighCardinalityState(t *testing.T) {
+	rl := NewLoginRateLimiter(5, time.Minute)
+	rl.maxEntries = 2
+	if !rl.Allow("1.1.1.1", "one") || !rl.Allow("2.2.2.2", "two") {
+		t.Fatal("expected entries within the cap to be allowed")
+	}
+	if rl.Allow("3.3.3.3", "three") {
+		t.Fatal("expected a new key beyond the cap to be rejected")
+	}
+	if len(rl.byIP) != 2 || len(rl.byUser) != 2 {
+		t.Fatalf("limiter state grew beyond cap: ips=%d users=%d", len(rl.byIP), len(rl.byUser))
+	}
+}

@@ -75,18 +75,29 @@ func (s *Service) ResolveSession(ctx context.Context, rawID string) (Session, Us
 
 	if s.adminChecker != nil && (sess.AdminCheckedAt.IsZero() || time.Since(sess.AdminCheckedAt) >= 15*time.Minute) {
 		token, decErr := s.crypto.Decrypt(sess.MediaServerAccessTokenEncrypted)
-		if decErr == nil {
+		adminVerified := false
+		if decErr == nil && token != "" {
 			isAdmin, checkErr := s.adminChecker.FetchUserAdminStatus(ctx, usr.MediaServerUserID, token)
 			if checkErr == nil {
+				adminVerified = true
 				if isAdmin != usr.IsAdmin {
 					meta := "admin_changed"
 					_ = store.InsertAuditLog(ctx, s.db, &usr.ID, "permission.change_detected", usr.MediaServerUserID, meta, sess.IPAddress)
 				}
 				usr.IsAdmin = isAdmin
 				_ = store.UpdateUserAdmin(ctx, s.db, usr.ID, isAdmin)
-				_ = store.UpdateSessionAdminCheckedAt(ctx, s.db, sess.IDHash, time.Now().UTC())
 			}
 		}
+		// Cached administrator status must not remain authoritative when the
+		// upstream permission check cannot be completed. Persist the safe state
+		// so subsequent requests and other sessions cannot reuse stale access.
+		if !adminVerified {
+			if usr.IsAdmin {
+				usr.IsAdmin = false
+				_ = store.UpdateUserAdmin(ctx, s.db, usr.ID, false)
+			}
+		}
+		_ = store.UpdateSessionAdminCheckedAt(ctx, s.db, sess.IDHash, time.Now().UTC())
 	}
 
 	return sess, usr, nil

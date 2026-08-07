@@ -73,9 +73,9 @@ jobs:
           title="${INPUT_TITLE}"
           if [ -z "$title" ]; then
             if [ "$version" = "latest" ]; then
-              title="Dashboard update"
+              title="Dashboard Update"
             else
-              title="Dashboard update ${version}"
+              title="Dashboard Update ${version}"
             fi
           fi
 
@@ -153,7 +153,7 @@ jobs:
           node <<'NODE'
           const webhook = process.env.DISCORD_WEBHOOK_URL;
           const version = process.env.ANNOUNCE_VERSION || "latest";
-          const title = process.env.ANNOUNCE_TITLE || (version === "latest" ? "Dashboard update" : `Dashboard update ${version}`);
+          const title = process.env.ANNOUNCE_TITLE || (version === "latest" ? "Dashboard Update" : `Dashboard Update ${version}`);
           const notes = (process.env.ANNOUNCE_SUMMARY || "").trim();
           const changes = (process.env.ANNOUNCE_CHANGES || "")
             .split(/\r?\n/)
@@ -167,7 +167,7 @@ jobs:
           const noteText = notes ? `${notes}\n\n${changeText}` : changeText;
 
           const payload = {
-            username: "Dashboard Updates",
+            username: "Veyra",
             allowed_mentions: { parse: [] },
             embeds: [
               {
@@ -179,7 +179,7 @@ jobs:
                     value: noteText.slice(0, 1024)
                   }
                 ],
-                footer: { text: "Dashboard" },
+                footer: { text: "Veyra" },
                 timestamp: new Date().toISOString()
               }
             ]
