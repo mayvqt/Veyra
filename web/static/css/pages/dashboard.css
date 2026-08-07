@@ -191,11 +191,44 @@
   gap: 0;
 }
 
+.request-section-head {
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--line);
+}
+
+.request-count {
+  min-width: 1.7rem;
+  color: var(--muted);
+  text-align: center;
+}
+
 .request-row {
   display: grid;
   gap: 0.58rem;
   padding: 0.86rem 0;
   background: transparent;
+}
+
+.request-row.request-complete {
+  gap: 0;
+  padding: 0.68rem 0;
+}
+
+.request-complete .status-pill {
+  position: relative;
+  padding-left: 1.15rem;
+}
+
+.request-complete .status-pill::before {
+  position: absolute;
+  left: 0.48rem;
+  top: 50%;
+  width: 0.38rem;
+  height: 0.38rem;
+  border-radius: 50%;
+  background: var(--ok);
+  transform: translateY(-50%);
+  content: "";
 }
 
 .request-head {

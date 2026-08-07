@@ -299,6 +299,27 @@ func TestDashboardTemplateRendersRequestLifecycle(t *testing.T) {
 	}
 }
 
+func TestDashboardTemplateCompactsAvailableRequests(t *testing.T) {
+	h, db := mkHandlers(t)
+	defer db.Close()
+
+	view := ViewData{
+		AppName:                "Veyra",
+		SettingsShowRecentReqs: true,
+		RecentRequests:         []dashboard.RequestItem{{Title: "Ready Movie", Status: "Available", StatusKey: "available", Media: "Movie"}},
+	}
+
+	w := httptest.NewRecorder()
+	h.render(w, "dashboard.html", view)
+	body := w.Body.String()
+	if !strings.Contains(body, `class="stack-item request-row request-complete"`) {
+		t.Fatal("expected available request to render as a compact completed row")
+	}
+	if strings.Contains(body, `progress-available`) || strings.Contains(body, `class="request-lifecycle"`) {
+		t.Fatal("available request should not repeat completed progress details")
+	}
+}
+
 func TestDashboardTemplateRendersQuotaMeters(t *testing.T) {
 	h, db := mkHandlers(t)
 	defer db.Close()

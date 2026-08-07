@@ -209,11 +209,14 @@
 
         {{ if .SettingsShowRecentReqs }}
         <section class="panel">
-          <h2>Recent Requests</h2>
+          <div class="panel-title-row request-section-head">
+            <h2>Recent Requests</h2>
+            {{ if .RecentRequests }}<span class="pill request-count">{{ len .RecentRequests }}</span>{{ end }}
+          </div>
           {{ if .RecentRequests }}
           <ul class="stack request-list">
             {{ range .RecentRequests }}
-            <li class="stack-item request-row">
+            <li class="stack-item request-row {{ if eq .StatusKey "available" }}request-complete{{ end }}">
               <div class="request-head">
                 <div class="request-title-block">
                   <strong>{{ .Title }}</strong>
@@ -221,6 +224,7 @@
                 </div>
                 <span class="pill status-pill status-{{ .StatusKey }}">{{ .Status }}</span>
               </div>
+              {{ if ne .StatusKey "available" }}
               <div class="request-progress progress-{{ .StatusKey }}" aria-label="{{ .Status }} request progress"><span></span></div>
               {{ if .Lifecycle }}
               <ol class="request-lifecycle" aria-label="Request stages">
@@ -228,6 +232,7 @@
                 <li class="request-lifecycle-step step-{{ .Key }} is-{{ .State }}">{{ .Label }}</li>
                 {{ end }}
               </ol>
+              {{ end }}
               {{ end }}
             </li>
             {{ end }}
