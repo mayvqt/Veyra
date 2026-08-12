@@ -61,3 +61,27 @@ func TestLoginRateLimiterBoundsHighCardinalityState(t *testing.T) {
 		t.Fatalf("limiter state grew beyond cap: ips=%d users=%d", len(rl.byIP), len(rl.byUser))
 	}
 }
+
+func TestLoginRateLimiterBlockedUsernameDoesNotConsumeIPAddressAllowance(t *testing.T) {
+	rl := NewLoginRateLimiter(2, time.Minute)
+	if !rl.Allow("1.1.1.1", "blocked") || !rl.Allow("2.2.2.2", "blocked") {
+		t.Fatal("expected initial username attempts to pass")
+	}
+	if rl.Allow("3.3.3.3", "blocked") {
+		t.Fatal("expected username limit to block the attempt")
+	}
+	if !rl.Allow("3.3.3.3", "other") || !rl.Allow("3.3.3.3", "other") {
+		t.Fatal("blocked username attempt consumed IP allowance")
+	}
+}
+
+func TestLoginRateLimiterRejectsInvalidConfiguration(t *testing.T) {
+	for _, rl := range []*LoginRateLimiter{
+		NewLoginRateLimiter(0, time.Minute),
+		NewLoginRateLimiter(2, 0),
+	} {
+		if rl.Allow("1.1.1.1", "user") {
+			t.Fatal("invalid limiter configuration should fail closed")
+		}
+	}
+}

@@ -38,6 +38,9 @@ func NewLoginRateLimiter(max int, window time.Duration) *LoginRateLimiter {
 func (l *LoginRateLimiter) Allow(ip, username string) bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
+	if l.max <= 0 || l.window <= 0 || l.maxEntries <= 0 {
+		return false
+	}
 	now := time.Now()
 	l.calls++
 	if l.cleanupEvery > 0 && l.calls%l.cleanupEvery == 0 {
@@ -54,32 +57,38 @@ func (l *LoginRateLimiter) Allow(ip, username string) bool {
 	if _, exists := l.byUser[username]; !exists && len(l.byUser) >= l.maxEntries {
 		return false
 	}
-	if !allowKey(l.byIP, ip, now, l.window, l.max) {
+	// Check both dimensions before recording either one. A blocked username must
+	// not consume the shared IP allowance and lock out unrelated users.
+	if !keyAllowed(l.byIP, ip, now, l.max) || !keyAllowed(l.byUser, username, now, l.max) {
 		return false
 	}
-	if !allowKey(l.byUser, username, now, l.window, l.max) {
-		return false
-	}
+	recordKey(l.byIP, ip, now, l.window)
+	recordKey(l.byUser, username, now, l.window)
 	return true
 }
 
-func allowKey(m map[string]bucket, key string, now time.Time, window time.Duration, max int) bool {
+func keyAllowed(m map[string]bucket, key string, now time.Time, max int) bool {
 	b, ok := m[key]
-	if !ok || now.After(b.reset) {
-		m[key] = bucket{count: 1, reset: now.Add(window)}
+	if !ok || !now.Before(b.reset) {
 		return true
 	}
-	if b.count >= max {
-		return false
+	return b.count < max
+
+}
+
+func recordKey(m map[string]bucket, key string, now time.Time, window time.Duration) {
+	b, ok := m[key]
+	if !ok || !now.Before(b.reset) {
+		m[key] = bucket{count: 1, reset: now.Add(window)}
+		return
 	}
 	b.count++
 	m[key] = b
-	return true
 }
 
 func pruneExpiredBuckets(m map[string]bucket, now time.Time) {
 	for k, b := range m {
-		if now.After(b.reset) {
+		if !now.Before(b.reset) {
 			delete(m, k)
 		}
 	}
