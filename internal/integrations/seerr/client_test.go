@@ -173,6 +173,25 @@ func TestRecentRequestsForUserResolvesTitles(t *testing.T) {
 	}
 }
 
+func TestRecentRequestsForUnresolvedUserUsesDefaultLimit(t *testing.T) {
+	c := NewClient("http://seerr.local", "https://seerr.example", "k")
+	c.http = &http.Client{Transport: testutil.RoundTripFunc(func(r *http.Request) (*http.Response, error) {
+		body := `{"results":[
+			{"status":1,"media":{"mediaType":"movie","title":"One"},"requestedBy":{"username":"admin"}},
+			{"status":1,"media":{"mediaType":"movie","title":"Two"},"requestedBy":{"username":"admin"}}
+		]}`
+		return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(body)), Header: make(http.Header)}, nil
+	})}
+
+	reqs, err := c.RecentRequestsForUser(context.Background(), UserIdentity{Username: "admin"}, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(reqs) != 2 {
+		t.Fatalf("expected default limit to return both requests, got %d", len(reqs))
+	}
+}
+
 func TestRecentRequestsIncludesLifecycle(t *testing.T) {
 	c := NewClient("http://seerr.local", "https://seerr.example", "k")
 	c.http = &http.Client{Transport: testutil.RoundTripFunc(func(r *http.Request) (*http.Response, error) {

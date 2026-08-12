@@ -36,6 +36,9 @@ func (c *Client) RecentRequests(ctx context.Context, limit int) ([]dashboard.Req
 }
 
 func (c *Client) RecentRequestsForUser(ctx context.Context, user UserIdentity, limit int) ([]dashboard.RequestItem, error) {
+	if limit <= 0 {
+		limit = 10
+	}
 	if user.ID > 0 {
 		return c.recentRequestsFrom(ctx, requestListPath(limit, user.ID), limit)
 	}
