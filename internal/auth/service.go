@@ -3,6 +3,8 @@ package auth
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -26,6 +28,12 @@ type Service struct {
 	crypto        *security.Crypto
 	sessionSecret string
 	adminChecker  AdminStatusChecker
+	log           *slog.Logger
+}
+
+func (s *Service) WithLogger(log *slog.Logger) *Service {
+	s.log = log
+	return s
 }
 
 func NewService(db *sql.DB, crypto *security.Crypto, sessionSecret string, adminChecker AdminStatusChecker) *Service {
@@ -64,7 +72,7 @@ func (s *Service) ResolveSession(ctx context.Context, rawID string) (Session, Us
 	}
 	now := time.Now().UTC()
 	if now.Sub(sessRow.LastSeenAt) >= sessionTouchInterval {
-		_ = store.TouchSession(ctx, s.db, sessRow.IDHash, now)
+		s.warnPersistence("touch session", store.TouchSession(ctx, s.db, sessRow.IDHash, now))
 		sessRow.LastSeenAt = now
 	}
 	usrRow, err := store.GetUserByID(ctx, s.db, sessRow.UserID)
@@ -83,10 +91,12 @@ func (s *Service) ResolveSession(ctx context.Context, rawID string) (Session, Us
 				adminVerified = true
 				if isAdmin != usr.IsAdmin {
 					meta := "admin_changed"
-					_ = store.InsertAuditLog(ctx, s.db, &usr.ID, "permission.change_detected", usr.MediaServerUserID, meta, sess.IPAddress)
+					s.warnPersistence("audit permission change", store.InsertAuditLog(ctx, s.db, &usr.ID, "permission.change_detected", usr.MediaServerUserID, meta, sess.IPAddress))
 				}
 				usr.IsAdmin = isAdmin
-				_ = store.UpdateUserAdmin(ctx, s.db, usr.ID, isAdmin)
+				if err := store.UpdateUserAdmin(ctx, s.db, usr.ID, isAdmin); err != nil {
+					return Session{}, User{}, fmt.Errorf("persist administrator status: %w", err)
+				}
 			}
 		}
 		// Cached administrator status must not remain authoritative when the
@@ -95,13 +105,21 @@ func (s *Service) ResolveSession(ctx context.Context, rawID string) (Session, Us
 		if !adminVerified {
 			if usr.IsAdmin {
 				usr.IsAdmin = false
-				_ = store.UpdateUserAdmin(ctx, s.db, usr.ID, false)
+				if err := store.UpdateUserAdmin(ctx, s.db, usr.ID, false); err != nil {
+					return Session{}, User{}, fmt.Errorf("persist safe administrator status: %w", err)
+				}
 			}
 		}
-		_ = store.UpdateSessionAdminCheckedAt(ctx, s.db, sess.IDHash, time.Now().UTC())
+		s.warnPersistence("record admin check", store.UpdateSessionAdminCheckedAt(ctx, s.db, sess.IDHash, time.Now().UTC()))
 	}
 
 	return sess, usr, nil
+}
+
+func (s *Service) warnPersistence(operation string, err error) {
+	if err != nil && s.log != nil {
+		s.log.Warn("authentication persistence failed", "operation", operation, "err", err)
+	}
 }
 
 func adminCheckDue(lastChecked, now time.Time) bool {

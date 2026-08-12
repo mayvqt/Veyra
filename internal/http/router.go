@@ -32,7 +32,7 @@ func NewRouter(cfg config.Config, log *slog.Logger, db *sql.DB) (http.Handler, e
 	if err != nil {
 		return nil, err
 	}
-	authSvc := auth.NewService(db, crypto, cfg.SessionSecret, mediaserverClient)
+	authSvc := auth.NewService(db, crypto, cfg.SessionSecret, mediaserverClient).WithLogger(log)
 	seerrClient := seerr.NewClient(cfg.SeerrURL, cfg.SeerrPublicURL, cfg.SeerrAPIKey)
 	sonarrClient := arr.NewClient("Sonarr", cfg.SonarrURL, cfg.SonarrAPIKey)
 	radarrClient := arr.NewClient("Radarr", cfg.RadarrURL, cfg.RadarrAPIKey)
