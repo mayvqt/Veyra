@@ -3,6 +3,6 @@
   "private": true,
   "scripts": {
     "lint": "node scripts/check-js.mjs",
-    "test": "node --test scripts/js-tests"
+    "test": "node --test scripts/js-tests/*.test.mjs"
   }
 }
