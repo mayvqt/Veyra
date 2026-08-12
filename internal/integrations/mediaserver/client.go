@@ -98,12 +98,17 @@ func (c *Client) Health(ctx context.Context) integrations.HealthStatus {
 }
 
 type latestItem struct {
-	ID             string `json:"Id"`
-	Name           string `json:"Name"`
-	Type           string `json:"Type"`
-	ProductionYear int    `json:"ProductionYear"`
-	DateCreated    string `json:"DateCreated"`
-	ImageTags      struct {
+	ID                    string `json:"Id"`
+	Name                  string `json:"Name"`
+	Type                  string `json:"Type"`
+	ProductionYear        int    `json:"ProductionYear"`
+	DateCreated           string `json:"DateCreated"`
+	SeriesID              string `json:"SeriesId"`
+	SeriesName            string `json:"SeriesName"`
+	SeriesPrimaryImageTag string `json:"SeriesPrimaryImageTag"`
+	ParentIndexNumber     *int   `json:"ParentIndexNumber"`
+	IndexNumber           *int   `json:"IndexNumber"`
+	ImageTags             struct {
 		Primary string `json:"Primary"`
 	} `json:"ImageTags"`
 }
@@ -181,20 +186,44 @@ func (c *Client) fetchLatestByTypes(ctx context.Context, userID, token string, l
 	out := make([]dashboard.MediaItem, 0, len(rows))
 	for _, r := range rows {
 		addedAt, _ := time.Parse(time.RFC3339, r.DateCreated)
-		item := dashboard.MediaItem{Title: cleanDisplayTitle(r.Name), Type: r.Type, Year: r.ProductionYear, AddedAt: addedAt}
+		item := mediaItemFromLatest(r, addedAt)
 		if r.ID != "" && c.publicURL != "" {
 			item.OpenURL = c.provider.ItemURL(c.publicURL, r.ID)
 		}
-		if r.ID != "" {
+		imageID, imageTag := r.ID, r.ImageTags.Primary
+		if strings.EqualFold(r.Type, "Episode") && r.SeriesID != "" {
+			imageID, imageTag = r.SeriesID, r.SeriesPrimaryImageTag
+		}
+		if imageID != "" {
 			img := url.Values{}
-			if r.ImageTags.Primary != "" {
-				img.Set("tag", r.ImageTags.Primary)
+			if imageTag != "" {
+				img.Set("tag", imageTag)
 			}
-			item.ImageURL = fmt.Sprintf("/media/server/poster/%s?%s", url.PathEscape(r.ID), img.Encode())
+			item.ImageURL = fmt.Sprintf("/media/server/poster/%s?%s", url.PathEscape(imageID), img.Encode())
 		}
 		out = append(out, item)
 	}
 	return out, nil
+}
+
+func mediaItemFromLatest(row latestItem, addedAt time.Time) dashboard.MediaItem {
+	item := dashboard.MediaItem{Title: cleanDisplayTitle(row.Name), Type: row.Type, Year: row.ProductionYear, AddedAt: addedAt}
+	if !strings.EqualFold(row.Type, "Episode") {
+		return item
+	}
+	item.Type = "TV"
+	if strings.TrimSpace(row.SeriesName) != "" {
+		item.Title = cleanDisplayTitle(row.SeriesName)
+	}
+	item.Subtitle = episodeLabel(row.ParentIndexNumber, row.IndexNumber, cleanDisplayTitle(row.Name))
+	return item
+}
+
+func episodeLabel(season, episode *int, title string) string {
+	if season == nil || episode == nil {
+		return title
+	}
+	return fmt.Sprintf("S%02dE%02d · %s", *season, *episode, title)
 }
 
 func cleanDisplayTitle(name string) string {

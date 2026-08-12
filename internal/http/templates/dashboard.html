@@ -183,7 +183,7 @@
               {{ if .ImageURL }}<img class="poster" src="{{ .ImageURL }}" alt="{{ .Title }} poster" loading="lazy">{{ else }}<div class="poster poster-empty">{{ .Type }}</div>{{ end }}
               <div class="media-content">
                 <strong>{{ .Title }}</strong>
-                <span class="meta-line">{{ .Type }}{{ if .Year }} · {{ .Year }}{{ end }}</span>
+                <span class="meta-line">{{ .Type }}{{ if .Subtitle }} · {{ .Subtitle }}{{ else if .Year }} · {{ .Year }}{{ end }}</span>
                 {{ if .OpenURL }}
                 <a class="mini-action media-action" href="{{ .OpenURL }}">{{ $.MediaServerName }}</a>
                 {{ end }}

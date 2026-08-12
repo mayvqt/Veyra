@@ -4,6 +4,7 @@ import "time"
 
 type MediaItem struct {
 	Title    string
+	Subtitle string
 	Type     string
 	Year     int
 	AddedAt  time.Time

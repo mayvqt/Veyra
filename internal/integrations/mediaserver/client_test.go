@@ -42,7 +42,7 @@ func TestHealthAndRecentlyAdded(t *testing.T) {
 				body = `[{"Id":"m1","Name":"Movie1","Type":"Movie","ProductionYear":2024,"DateCreated":"2025-01-01T00:00:00Z","ImageTags":{"Primary":"tag1"}}]`
 			}
 			if types == "Episode,Series" {
-				body = `[{"Id":"e1","Name":"Show1","Type":"Episode","ProductionYear":2025,"DateCreated":"2025-01-02T00:00:00Z","ImageTags":{"Primary":"tag2"}}]`
+				body = `[{"Id":"e1","Name":"The Beginning","Type":"Episode","ProductionYear":2025,"DateCreated":"2025-01-02T00:00:00Z","SeriesId":"s1","SeriesName":"Show1","SeriesPrimaryImageTag":"series-tag","ParentIndexNumber":1,"IndexNumber":2,"ImageTags":{"Primary":"episode-tag"}}]`
 			}
 			return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(body)), Header: make(http.Header)}, nil
 		}
@@ -59,6 +59,12 @@ func TestHealthAndRecentlyAdded(t *testing.T) {
 	}
 	if len(items) != 2 || items[0].Title != "Show1" || items[1].Title != "Movie1" {
 		t.Fatal("unexpected recently added payload")
+	}
+	if items[0].Type != "TV" || items[0].Subtitle != "S01E02 · The Beginning" {
+		t.Fatalf("unexpected episode presentation: %+v", items[0])
+	}
+	if items[0].ImageURL != "/media/server/poster/s1?tag=series-tag" {
+		t.Fatalf("expected series poster URL, got %q", items[0].ImageURL)
 	}
 }
 
