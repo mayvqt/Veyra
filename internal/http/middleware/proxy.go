@@ -35,10 +35,7 @@ func TrustedProxy(trustedCIDRs []string) func(http.Handler) http.Handler {
 			host := r.Host
 
 			if trusted(ip, nets) {
-				xff := strings.TrimSpace(strings.Split(r.Header.Get("X-Forwarded-For"), ",")[0])
-				if net.ParseIP(xff) != nil {
-					ip = xff
-				}
+				ip = forwardedClientIP(r.Header.Get("X-Forwarded-For"), ip, nets)
 				xfp := strings.TrimSpace(strings.Split(r.Header.Get("X-Forwarded-Proto"), ",")[0])
 				if xfp == "http" || xfp == "https" {
 					proto = xfp
@@ -54,6 +51,25 @@ func TrustedProxy(trustedCIDRs []string) func(http.Handler) http.Handler {
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
+}
+
+func forwardedClientIP(value, fallback string, trustedNets []*net.IPNet) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return fallback
+	}
+	chain := strings.Split(value, ",")
+	candidate := fallback
+	for i := len(chain) - 1; i >= 0; i-- {
+		candidate = strings.TrimSpace(chain[i])
+		if net.ParseIP(candidate) == nil {
+			return fallback
+		}
+		if !trusted(candidate, trustedNets) {
+			return candidate
+		}
+	}
+	return candidate
 }
 
 func ClientIP(r *http.Request) string {

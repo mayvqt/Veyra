@@ -34,6 +34,34 @@ func TestTrustedProxyUsesForwardedHeaders(t *testing.T) {
 	}
 }
 
+func TestTrustedProxyIgnoresSpoofedForwardedForPrefix(t *testing.T) {
+	mw := TrustedProxy([]string{"127.0.0.1/32", "10.0.0.0/8"})
+	h := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := ClientIP(r); got != "8.8.8.8" {
+			t.Fatalf("expected nearest untrusted client IP, got %q", got)
+		}
+	}))
+
+	r := httptest.NewRequest(http.MethodGet, "http://local/", nil)
+	r.RemoteAddr = "127.0.0.1:1234"
+	r.Header.Set("X-Forwarded-For", "1.2.3.4, 8.8.8.8, 10.0.0.2")
+	h.ServeHTTP(httptest.NewRecorder(), r)
+}
+
+func TestTrustedProxyRejectsMalformedForwardedForChain(t *testing.T) {
+	mw := TrustedProxy([]string{"127.0.0.1/32"})
+	h := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := ClientIP(r); got != "127.0.0.1" {
+			t.Fatalf("expected remote IP fallback, got %q", got)
+		}
+	}))
+
+	r := httptest.NewRequest(http.MethodGet, "http://local/", nil)
+	r.RemoteAddr = "127.0.0.1:1234"
+	r.Header.Set("X-Forwarded-For", "8.8.8.8, not-an-ip")
+	h.ServeHTTP(httptest.NewRecorder(), r)
+}
+
 func TestTrustedProxyAllowsForwardedHostPort(t *testing.T) {
 	mw := TrustedProxy([]string{"127.0.0.1/32"})
 	h := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
