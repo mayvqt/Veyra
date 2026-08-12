@@ -2,7 +2,6 @@ package seerr
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 )
@@ -41,7 +40,7 @@ func (c *Client) userQuotaFrom(ctx context.Context, path string) (*Quota, error)
 		return nil, fmt.Errorf("status %d", resp.StatusCode)
 	}
 	var payload map[string]any
-	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+	if err := decodeLimitedSeerrJSON(resp.Body, &payload); err != nil {
 		return nil, err
 	}
 	limit, lok := findInt(payload, "requestLimit")

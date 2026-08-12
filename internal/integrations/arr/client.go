@@ -24,6 +24,8 @@ type Client struct {
 	http    *http.Client
 }
 
+const arrJSONLimit = 4 << 20
+
 func NewClient(name, baseURL, apiKey string) *Client {
 	return newClient(name, baseURL, apiKey, "/api/v3")
 }
@@ -251,7 +253,7 @@ func (c *Client) fetchEntityTitle(ctx context.Context, path string, titlePaths .
 		return ""
 	}
 	var row map[string]any
-	if err := json.NewDecoder(resp.Body).Decode(&row); err != nil {
+	if err := decodeArrJSON(resp.Body, &row); err != nil {
 		return ""
 	}
 	for _, p := range titlePaths {
@@ -327,7 +329,7 @@ func (c *Client) UpcomingWindow(ctx context.Context, start, end time.Time, limit
 		return nil, fmt.Errorf("%s calendar failed: %d", c.name, resp.StatusCode)
 	}
 	var rows []map[string]any
-	if err := json.NewDecoder(resp.Body).Decode(&rows); err != nil {
+	if err := decodeArrJSON(resp.Body, &rows); err != nil {
 		return nil, err
 	}
 	out := make([]dashboard.CalendarItem, 0, len(rows))
@@ -425,7 +427,7 @@ func (c *Client) queuePage(ctx context.Context, page, pageSize int) ([]map[strin
 		return nil, 0, fmt.Errorf("%s queue failed: %d", c.name, resp.StatusCode)
 	}
 	var payload any
-	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+	if err := decodeArrJSON(resp.Body, &payload); err != nil {
 		return nil, 0, err
 	}
 	rows := queueRows(payload)
@@ -443,6 +445,10 @@ func (c *Client) newRequest(ctx context.Context, method, path string, body io.Re
 	}
 	req.Header.Set("X-Api-Key", c.apiKey)
 	return req, nil
+}
+
+func decodeArrJSON(body io.Reader, out any) error {
+	return json.NewDecoder(io.LimitReader(body, arrJSONLimit)).Decode(out)
 }
 
 func (c *Client) httpClient() *http.Client {

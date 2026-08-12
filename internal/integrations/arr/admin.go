@@ -2,7 +2,6 @@ package arr
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -89,7 +88,7 @@ func (c *Client) getJSON(ctx context.Context, path string, out any) error {
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		return fmt.Errorf("%s %s failed: %d", c.name, path, resp.StatusCode)
 	}
-	return json.NewDecoder(resp.Body).Decode(out)
+	return decodeArrJSON(resp.Body, out)
 }
 
 func diskWarnings(rows []DiskSpace) []string {

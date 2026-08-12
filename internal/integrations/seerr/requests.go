@@ -86,7 +86,7 @@ func (c *Client) recentRequestsFrom(ctx context.Context, path string, limit int)
 		return nil, fmt.Errorf("seerr request list failed: %d", resp.StatusCode)
 	}
 	var payload requestResp
-	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+	if err := decodeLimitedSeerrJSON(resp.Body, &payload); err != nil {
 		return nil, err
 	}
 	out := make([]dashboard.RequestItem, 0, len(payload.Results))
@@ -256,7 +256,7 @@ func (c *Client) resolveMediaTitle(ctx context.Context, mediaType string, row ma
 		return ""
 	}
 	var payload map[string]any
-	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+	if err := decodeLimitedSeerrJSON(resp.Body, &payload); err != nil {
 		return ""
 	}
 	for _, field := range []string{"title", "name", "originalTitle", "originalName"} {

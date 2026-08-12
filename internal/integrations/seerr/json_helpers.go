@@ -3,9 +3,12 @@ package seerr
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 )
+
+const seerrJSONLimit = 4 << 20
 
 func stringPath(row map[string]any, keys ...string) (string, bool) {
 	var current any = row
@@ -71,7 +74,7 @@ func anySlicePath(row map[string]any, keys ...string) ([]any, bool) {
 
 func seerrHTTPError(resp *http.Response) string {
 	var payload map[string]any
-	if err := json.NewDecoder(resp.Body).Decode(&payload); err == nil {
+	if err := decodeLimitedSeerrJSON(resp.Body, &payload); err == nil {
 		for _, key := range []string{"message", "error"} {
 			if msg, ok := payload[key].(string); ok && strings.TrimSpace(msg) != "" {
 				return fmt.Sprintf("%d %s", resp.StatusCode, strings.TrimSpace(msg))
@@ -86,8 +89,12 @@ func decodeSeerrJSON(resp *http.Response, out any) error {
 	if contentType != "" && !strings.Contains(contentType, "application/json") {
 		return fmt.Errorf("seerr returned non-JSON response: HTTP %d", resp.StatusCode)
 	}
-	if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
+	if err := decodeLimitedSeerrJSON(resp.Body, out); err != nil {
 		return fmt.Errorf("seerr returned invalid JSON: HTTP %d", resp.StatusCode)
 	}
 	return nil
+}
+
+func decodeLimitedSeerrJSON(body io.Reader, out any) error {
+	return json.NewDecoder(io.LimitReader(body, seerrJSONLimit)).Decode(out)
 }

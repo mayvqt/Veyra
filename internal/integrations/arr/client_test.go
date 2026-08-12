@@ -43,6 +43,18 @@ func TestHealthAndQueue(t *testing.T) {
 	}
 }
 
+func TestQueueRejectsOversizedJSONResponse(t *testing.T) {
+	c := NewClient("Sonarr", "http://sonarr.local", "k")
+	c.http = &http.Client{Transport: testutil.RoundTripFunc(func(r *http.Request) (*http.Response, error) {
+		body := strings.Repeat(" ", arrJSONLimit) + `{"records":[]}`
+		return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(body)), Header: make(http.Header)}, nil
+	})}
+
+	if _, err := c.Queue(context.Background(), 5); err == nil {
+		t.Fatal("expected oversized response to be rejected")
+	}
+}
+
 func TestHealthHandlesNilClient(t *testing.T) {
 	var c *Client
 	hs := c.Health(context.Background())

@@ -2,7 +2,6 @@ package seerr
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -34,7 +33,7 @@ func (c *Client) Search(ctx context.Context, query string, limit int) ([]SearchR
 		return nil, fmt.Errorf("seerr search failed: %s", seerrHTTPError(resp))
 	}
 	var payload requestResp
-	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+	if err := decodeLimitedSeerrJSON(resp.Body, &payload); err != nil {
 		return nil, err
 	}
 	out := make([]SearchResult, 0, min(limit, len(payload.Results)))
@@ -213,7 +212,7 @@ func (c *Client) tvSeasonOptions(ctx context.Context, tvID int) []SeasonOption {
 		return nil
 	}
 	var payload map[string]any
-	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+	if err := decodeLimitedSeerrJSON(resp.Body, &payload); err != nil {
 		return nil
 	}
 	rows, ok := anySlicePath(payload, "seasons")

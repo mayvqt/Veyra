@@ -2,7 +2,6 @@ package seerr
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -27,7 +26,7 @@ func (c *Client) ResolveUser(ctx context.Context, username, displayName string) 
 		return nil, fmt.Errorf("seerr user list failed: %d", resp.StatusCode)
 	}
 	var payload requestResp
-	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+	if err := decodeLimitedSeerrJSON(resp.Body, &payload); err != nil {
 		return nil, err
 	}
 	for _, row := range payload.Results {
@@ -61,7 +60,7 @@ func (c *Client) ResolveUserByMediaServerID(ctx context.Context, mediaServerUser
 		return nil, fmt.Errorf("seerr media server user lookup failed: %d", resp.StatusCode)
 	}
 	var row map[string]any
-	if err := json.NewDecoder(resp.Body).Decode(&row); err != nil {
+	if err := decodeLimitedSeerrJSON(resp.Body, &row); err != nil {
 		return nil, err
 	}
 	user, ok := userIdentity(row)

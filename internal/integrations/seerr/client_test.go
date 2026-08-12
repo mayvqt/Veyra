@@ -39,6 +39,18 @@ func TestHealthAndRecentRequests(t *testing.T) {
 	}
 }
 
+func TestSearchRejectsOversizedJSONResponse(t *testing.T) {
+	c := NewClient("http://seerr.local", "https://seerr.example", "k")
+	c.http = &http.Client{Transport: testutil.RoundTripFunc(func(r *http.Request) (*http.Response, error) {
+		body := strings.Repeat(" ", seerrJSONLimit) + `{"results":[]}`
+		return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(body)), Header: make(http.Header)}, nil
+	})}
+
+	if _, err := c.Search(context.Background(), "query", 5); err == nil {
+		t.Fatal("expected oversized response to be rejected")
+	}
+}
+
 func TestNotConfiguredReturnsErrorsWithoutRequests(t *testing.T) {
 	c := NewClient("", "", "")
 	c.http = &http.Client{Transport: testutil.RoundTripFunc(func(r *http.Request) (*http.Response, error) {
