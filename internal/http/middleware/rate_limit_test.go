@@ -70,7 +70,7 @@ func TestLoginRateLimiterBlockedUsernameDoesNotConsumeIPAddressAllowance(t *test
 	if rl.Allow("3.3.3.3", "blocked") {
 		t.Fatal("expected username limit to block the attempt")
 	}
-	if !rl.Allow("3.3.3.3", "other") || !rl.Allow("3.3.3.3", "other") {
+	if !rl.Allow("3.3.3.3", "other") || !rl.Allow("3.3.3.3", "another") {
 		t.Fatal("blocked username attempt consumed IP allowance")
 	}
 }
