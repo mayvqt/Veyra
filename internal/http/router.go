@@ -42,6 +42,7 @@ func NewRouter(cfg config.Config, log *slog.Logger, db *sql.DB) (http.Handler, e
 	r := chi.NewRouter()
 	r.Use(chimw.RequestID)
 	r.Use(chimw.Recoverer)
+	r.Use(middleware.LimitRequestBody(middleware.DefaultMaxRequestBodyBytes))
 	r.Use(middleware.TrustedProxy(cfg.TrustedProxyCIDRs))
 	r.Use(middleware.RequestLog(log))
 	r.Use(middleware.SecurityHeaders)
