@@ -264,29 +264,23 @@ func (h *Handlers) cachedArrAdminSummary(r *http.Request, svc arrAdminService) (
 		return arr.AdminSummary{}, false
 	}
 	key := "admin:summary:" + strings.ToLower(svc.Name)
-	var summary arr.AdminSummary
-	if cacheGetJSON(r.Context(), h.db, key, &summary) {
-		return summary, true
-	}
-	summary, err := svc.Client.AdminSummary(r.Context())
+	summary, err := cacheLoadJSON(h, r.Context(), key, cacheTTLHealth, func() (arr.AdminSummary, error) {
+		return svc.Client.AdminSummary(r.Context())
+	})
 	if err != nil {
 		return arr.AdminSummary{}, false
 	}
-	h.cacheSetJSON(r.Context(), key, summary, cacheTTLHealth)
 	return summary, true
 }
 
 func (h *Handlers) cachedMediaServerAdminSummary(r *http.Request) (mediaserver.AdminSummary, bool) {
 	key := "admin:summary:media_server"
-	var summary mediaserver.AdminSummary
-	if cacheGetJSON(r.Context(), h.db, key, &summary) {
-		return summary, true
-	}
-	summary, err := h.mediaserver.AdminSummary(r.Context())
+	summary, err := cacheLoadJSON(h, r.Context(), key, cacheTTLHealth, func() (mediaserver.AdminSummary, error) {
+		return h.mediaserver.AdminSummary(r.Context())
+	})
 	if err != nil {
 		return mediaserver.AdminSummary{}, false
 	}
-	h.cacheSetJSON(r.Context(), key, summary, cacheTTLHealth)
 	return summary, true
 }
 
