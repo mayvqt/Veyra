@@ -69,8 +69,6 @@ func (h *Handlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var (
-		wg sync.WaitGroup
-
 		mediaStat integrations.HealthStatus
 		sStat     integrations.HealthStatus
 
@@ -92,48 +90,39 @@ func (h *Handlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 		calendarWeekStart  time.Time
 	)
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		mediaStat = h.cachedHealth(r, "health:media_server", h.mediaserver)
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		sStat = h.cachedHealth(r, "health:seerr", h.seerr)
-	}()
+	loaders := []func(){
+		func() {
+			mediaStat = h.cachedHealth(r, "health:media_server", h.mediaserver)
+		},
+		func() {
+			sStat = h.cachedHealth(r, "health:seerr", h.seerr)
+		},
+	}
 
 	if view.SettingsShowRecentMedia {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		loaders = append(loaders, func() {
 			items, ok := h.fetchMediaRecentlyAddedWithAPIKey(r.Context(), u.MediaServerUserID)
 			if ok {
 				recentlyAdded = items
 			} else {
 				recentMediaUnavailable = true
 			}
-		}()
+		})
 	}
 
 	if view.SettingsShowRecentReqs {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		loaders = append(loaders, func() {
 			cacheKey := "requests:recent:v2:" + seerrUserCacheKey(seerrUser, u)
 			if reqs, err := cacheLoadJSON(h, r.Context(), cacheKey, cacheTTLWidget, func() ([]dashboard.RequestItem, error) {
 				return h.seerr.RecentRequestsForUser(r.Context(), seerrUser, 5)
 			}); err == nil {
 				recentRequests = reqs
 			}
-		}()
+		})
 	}
 
 	if view.SettingsShowQuota {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		loaders = append(loaders, func() {
 			cacheKey := "requests:quota:" + seerrUserCacheKey(seerrUser, u)
 			q, err := cacheLoadJSON(h, r.Context(), cacheKey, cacheTTLWidget, func() (seerr.Quota, error) {
 				qq, err := h.seerr.UserQuotaForUser(r.Context(), seerrUser)
@@ -153,20 +142,18 @@ func (h *Handlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 			if seerrUser.ID == 0 {
 				quotaNote = "Link this " + view.MediaServerName + " user in Seerr to view request limits."
 			}
-		}()
+		})
 	} else {
 		quotaNote = ""
 	}
 
 	if view.SettingsShowQueue {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		loaders = append(loaders, func() {
 			cacheKey := "downloads:queue"
 			downloadQueue, _ = cacheLoadJSON(h, r.Context(), cacheKey, cacheTTLHealth, func() ([]dashboard.QueueItem, error) {
 				return h.combinedDownloadQueue(r.Context(), 0), nil
 			})
-		}()
+		})
 	}
 
 	if view.SettingsShowCalendar {
@@ -180,14 +167,12 @@ func (h *Handlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 		calendarNextURL = fmt.Sprintf("/dashboard?week=%d", weekOffset+1)
 		calendarWeekStart = weekStart
 
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		loaders = append(loaders, func() {
 			upcomingCalendar = h.loadUpcomingCalendarWeek(r.Context(), weekStart, weekEnd)
-		}()
+		})
 	}
 
-	wg.Wait()
+	runConcurrently(loaders...)
 
 	view.MediaServerStatus = boolToStatus(mediaStat.OK)
 	view.SeerrStatus = boolToStatus(sStat.OK)
@@ -215,6 +200,18 @@ func (h *Handlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.render(w, "dashboard.html", view)
+}
+
+func runConcurrently(tasks ...func()) {
+	var wg sync.WaitGroup
+	wg.Add(len(tasks))
+	for _, task := range tasks {
+		go func() {
+			defer wg.Done()
+			task()
+		}()
+	}
+	wg.Wait()
 }
 
 func (h *Handlers) combinedDownloadQueue(ctx context.Context, limit int) []dashboard.QueueItem {
