@@ -19,8 +19,6 @@ RUN apt-get update \
   && chown -R veyra:veyra /app /config
 COPY --from=build /bin/veyra /usr/local/bin/veyra
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-COPY web ./web
-COPY internal/http/templates ./internal/http/templates
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 VOLUME ["/config"]
 ENV APP_BIND_ADDR=0.0.0.0:3767
