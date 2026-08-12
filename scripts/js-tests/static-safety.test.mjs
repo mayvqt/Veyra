@@ -1,0 +1,13 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import test from "node:test";
+import { javascriptFiles } from "../js-files.mjs";
+
+test("browser scripts avoid unsafe dynamic code and HTML sinks", async () => {
+  for (const file of await javascriptFiles()) {
+    const source = await readFile(file, "utf8");
+    assert.doesNotMatch(source, /\b(?:eval|Function)\s*\(/, `${file} uses dynamic code evaluation`);
+    assert.doesNotMatch(source, /\.(?:innerHTML|outerHTML)\s*=/, `${file} writes untrusted HTML`);
+    assert.doesNotMatch(source, /document\.write\s*\(/, `${file} uses document.write`);
+  }
+});

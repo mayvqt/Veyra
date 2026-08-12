@@ -56,6 +56,9 @@ jobs:
             git diff-tree --check --root -r "${{ github.sha }}"
           fi
 
+      - name: Check browser JavaScript
+        run: npm run lint && npm test
+
       - name: Run tests
         run: go test ./...
 
