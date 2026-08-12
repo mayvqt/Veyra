@@ -102,7 +102,7 @@ func (h *Handlers) SeerrRequestPost(w http.ResponseWriter, r *http.Request) {
 	if len(seasons) > 0 {
 		metadata["seasons"] = seasonNumbersString(seasons)
 	}
-	_ = store.InsertAuditLog(r.Context(), h.db, &user.ID, "request.created", strconv.Itoa(mediaID), auditMetadata(metadata), middleware.ClientIP(r))
+	h.warnPersistence("audit media request", store.InsertAuditLog(r.Context(), h.db, &user.ID, "request.created", strconv.Itoa(mediaID), auditMetadata(metadata), middleware.ClientIP(r)))
 	_ = json.NewEncoder(w).Encode(seerrCreateRequestResponse{RequestID: created.ID, Status: created.Status, Message: "Request sent to Seerr."})
 }
 

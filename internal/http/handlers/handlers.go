@@ -280,6 +280,12 @@ func (h *Handlers) debug(msg string, args ...any) {
 	}
 }
 
+func (h *Handlers) warnPersistence(operation string, err error) {
+	if err != nil && h.log != nil {
+		h.log.Warn("persistence operation failed", "operation", operation, "err", err)
+	}
+}
+
 func (h *Handlers) cachedHealth(r *http.Request, key string, client integrations.Integration) integrations.HealthStatus {
 	var status integrations.HealthStatus
 	if cacheGetJSON(r.Context(), h.db, key, &status) {

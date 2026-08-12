@@ -70,7 +70,7 @@ func (h *Handlers) LoginPost(w http.ResponseWriter, r *http.Request) {
 
 	userIn, token, err := h.mediaserver.Authenticate(r.Context(), username, password)
 	if err != nil {
-		_ = store.InsertAuditLog(r.Context(), h.db, nil, "login.failure", username, auditMetadata(map[string]string{"reason": "invalid_credentials"}), middleware.ClientIP(r))
+		h.warnPersistence("audit login failure", store.InsertAuditLog(r.Context(), h.db, nil, "login.failure", username, auditMetadata(map[string]string{"reason": "invalid_credentials"}), middleware.ClientIP(r)))
 		h.render(w, "login.html", ViewData{AppName: h.appName(r), CSRFToken: middleware.EnsureCSRFToken(w, r, h.cfg.CookieSecure), Now: time.Now(), Error: "Invalid credentials", MediaServerName: h.cfg.MediaServerType.Label()})
 		return
 	}
@@ -89,7 +89,7 @@ func (h *Handlers) LoginPost(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to create session", http.StatusInternalServerError)
 		return
 	}
-	_ = store.InsertAuditLog(r.Context(), h.db, &user.ID, "login.success", user.Username, auditMetadata(map[string]string{"display_name": user.DisplayName}), middleware.ClientIP(r))
+	h.warnPersistence("audit login success", store.InsertAuditLog(r.Context(), h.db, &user.ID, "login.success", user.Username, auditMetadata(map[string]string{"display_name": user.DisplayName}), middleware.ClientIP(r)))
 
 	h.setSessionCookie(w, sessionID, sessionDuration)
 	if user.IsAdmin {
@@ -112,9 +112,9 @@ func (h *Handlers) LogoutPost(w http.ResponseWriter, r *http.Request) {
 				h.log.Warn("media server logout failed", "provider", h.mediaserver.Name(), "err", err)
 			}
 		}
-		_ = h.authSvc.DestroySession(r.Context(), cookie.Value)
+		h.warnPersistence("destroy session", h.authSvc.DestroySession(r.Context(), cookie.Value))
 		if user.ID > 0 {
-			_ = store.InsertAuditLog(r.Context(), h.db, &user.ID, "logout", "session", "{}", middleware.ClientIP(r))
+			h.warnPersistence("audit logout", store.InsertAuditLog(r.Context(), h.db, &user.ID, "logout", "session", "{}", middleware.ClientIP(r)))
 		}
 	}
 	h.clearSessionCookie(w)
