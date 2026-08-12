@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -35,6 +37,43 @@ func TestCacheJSONHelpers(t *testing.T) {
 	var out2 x
 	if cacheGetJSON(context.Background(), db, "k2", &out2) {
 		t.Fatal("expected expired miss")
+	}
+}
+
+func TestCacheLoadJSONCoalescesConcurrentMisses(t *testing.T) {
+	h, db := mkHandlers(t)
+	defer db.Close()
+	db.SetMaxOpenConns(1)
+	var calls atomic.Int32
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	results := make(chan x, 8)
+	for range 8 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			value, err := cacheLoadJSON(h, context.Background(), "shared", time.Minute, func() (x, error) {
+				calls.Add(1)
+				<-start
+				return x{A: 42}, nil
+			})
+			if err != nil {
+				t.Errorf("cache load failed: %v", err)
+				return
+			}
+			results <- value
+		}()
+	}
+	close(start)
+	wg.Wait()
+	close(results)
+	if calls.Load() != 1 {
+		t.Fatalf("loader called %d times, want 1", calls.Load())
+	}
+	for result := range results {
+		if result.A != 42 {
+			t.Fatalf("unexpected cached result: %+v", result)
+		}
 	}
 }
 

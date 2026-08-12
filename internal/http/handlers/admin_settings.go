@@ -68,7 +68,7 @@ func (h *Handlers) AdminSettingsPost(w http.ResponseWriter, r *http.Request) {
 	if setupChanged {
 		audit["setup_config"] = "updated"
 	}
-	_ = store.InsertAuditLog(r.Context(), h.db, &u.ID, "admin.settings.updated", "settings", auditMetadata(audit), middleware.ClientIP(r))
+	h.warnPersistence("audit settings update", store.InsertAuditLog(r.Context(), h.db, &u.ID, "admin.settings.updated", "settings", auditMetadata(audit), middleware.ClientIP(r)))
 	if setupChanged {
 		http.Redirect(w, r, "/admin/settings?saved=restart", http.StatusFound)
 		if h.restart != nil {

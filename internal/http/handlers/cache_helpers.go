@@ -41,3 +41,22 @@ func (h *Handlers) cacheSetJSON(ctx context.Context, key string, v any, ttl time
 		h.debug("cache write failed", "key", key, "err", security.RedactErr(err))
 	}
 }
+
+func cacheLoadJSON[T any](h *Handlers, ctx context.Context, key string, ttl time.Duration, load func() (T, error)) (T, error) {
+	var value T
+	if cacheGetJSON(ctx, h.db, key, &value) {
+		return value, nil
+	}
+	lock := h.cacheLock(key)
+	lock.Lock()
+	defer lock.Unlock()
+	if cacheGetJSON(ctx, h.db, key, &value) {
+		return value, nil
+	}
+	value, err := load()
+	if err != nil {
+		return value, err
+	}
+	h.cacheSetJSON(ctx, key, value, ttl)
+	return value, nil
+}

@@ -34,6 +34,11 @@ type itemCounts struct {
 	EpisodeCount int `json:"EpisodeCount"`
 }
 
+type userSummary struct {
+	ID   string `json:"Id"`
+	Name string `json:"Name"`
+}
+
 type libraryPayload struct {
 	Items []struct {
 		Name string `json:"Name"`
@@ -98,7 +103,7 @@ func (c *Client) AdminSummary(ctx context.Context) (AdminSummary, error) {
 		return out, nil
 	}
 	var (
-		users    []map[string]any
+		users    []userSummary
 		counts   itemCounts
 		libs     libraryPayload
 		sessions []sessionPayload

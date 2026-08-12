@@ -59,15 +59,7 @@ func Run(ctx context.Context) error {
 		return fmt.Errorf("build router: %w", err)
 	}
 
-	srv := &http.Server{
-		Addr:              cfg.AppBindAddr,
-		Handler:           r,
-		ReadHeaderTimeout: 10 * time.Second,
-		ReadTimeout:       30 * time.Second,
-		WriteTimeout:      30 * time.Second,
-		IdleTimeout:       120 * time.Second,
-		MaxHeaderBytes:    64 << 10,
-	}
+	srv := newHTTPServer(cfg.AppBindAddr, r)
 
 	errCh := make(chan error, 1)
 	go func() {
@@ -85,6 +77,18 @@ func Run(ctx context.Context) error {
 			return nil
 		}
 		return err
+	}
+}
+
+func newHTTPServer(addr string, handler http.Handler) *http.Server {
+	return &http.Server{
+		Addr:              addr,
+		Handler:           handler,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       120 * time.Second,
+		MaxHeaderBytes:    64 << 10,
 	}
 }
 

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	veyra "github.com/mayvqt/veyra"
 	"github.com/mayvqt/veyra/internal/auth"
 	"github.com/mayvqt/veyra/internal/config"
 	"github.com/mayvqt/veyra/internal/http/handlers"
@@ -21,7 +22,7 @@ import (
 )
 
 func NewRouter(cfg config.Config, log *slog.Logger, db *sql.DB) (http.Handler, error) {
-	tmpl, err := template.ParseGlob("internal/http/templates/*.html")
+	tmpl, err := template.ParseFS(veyra.TemplateFS(), "*.html")
 	if err != nil {
 		return nil, err
 	}
@@ -31,7 +32,7 @@ func NewRouter(cfg config.Config, log *slog.Logger, db *sql.DB) (http.Handler, e
 	if err != nil {
 		return nil, err
 	}
-	authSvc := auth.NewService(db, crypto, cfg.SessionSecret, mediaserverClient)
+	authSvc := auth.NewService(db, crypto, cfg.SessionSecret, mediaserverClient).WithLogger(log)
 	seerrClient := seerr.NewClient(cfg.SeerrURL, cfg.SeerrPublicURL, cfg.SeerrAPIKey)
 	sonarrClient := arr.NewClient("Sonarr", cfg.SonarrURL, cfg.SonarrAPIKey)
 	radarrClient := arr.NewClient("Radarr", cfg.RadarrURL, cfg.RadarrAPIKey)
@@ -48,7 +49,7 @@ func NewRouter(cfg config.Config, log *slog.Logger, db *sql.DB) (http.Handler, e
 	r.Use(middleware.SecurityHeaders)
 
 	r.Get("/healthz", h.Health)
-	r.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.Dir("web/static"))))
+	r.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.FS(veyra.StaticFS()))))
 	r.Get("/", h.Home)
 	r.Get("/setup", h.SetupGet)
 	r.Post("/setup", h.SetupPost)
