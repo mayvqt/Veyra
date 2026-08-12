@@ -25,7 +25,7 @@ func (c *Client) ResolveUser(ctx context.Context, username, displayName string) 
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		return nil, fmt.Errorf("seerr user list failed: %d", resp.StatusCode)
 	}
-	var payload requestResp
+	var payload userListDTO
 	if err := decodeLimitedSeerrJSON(resp.Body, &payload); err != nil {
 		return nil, err
 	}
@@ -59,7 +59,7 @@ func (c *Client) ResolveUserByMediaServerID(ctx context.Context, mediaServerUser
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		return nil, fmt.Errorf("seerr media server user lookup failed: %d", resp.StatusCode)
 	}
-	var row map[string]any
+	var row userDTO
 	if err := decodeLimitedSeerrJSON(resp.Body, &row); err != nil {
 		return nil, err
 	}
@@ -76,23 +76,20 @@ func mediaServerUserLookupPath(mediaServerUserID string) string {
 	return "/api/v1/user/jellyfin/" + url.PathEscape(mediaServerUserID)
 }
 
-func userIdentity(row map[string]any) (*UserIdentity, bool) {
-	id, _ := directInt(row, "id")
-	if id <= 0 {
+func userIdentity(row userDTO) (*UserIdentity, bool) {
+	if row.ID <= 0 {
 		return nil, false
 	}
-	nameFields := seerrUsernameFields()
 	return &UserIdentity{
-		ID:          id,
-		Username:    firstString(row, nameFields...),
-		DisplayName: firstString(row, append([]string{"displayName"}, nameFields...)...),
+		ID:          row.ID,
+		Username:    firstNonEmptyString(row.Username, row.PlexUsername, row.JellyfinUsername, row.Email),
+		DisplayName: firstNonEmptyString(row.DisplayName, row.Username, row.PlexUsername, row.JellyfinUsername, row.Email),
 	}, true
 }
 
-func userMatches(row map[string]any, names ...string) bool {
-	for _, field := range append([]string{"displayName"}, seerrUsernameFields()...) {
-		value, ok := stringPath(row, field)
-		if !ok || value == "" {
+func userMatches(row userDTO, names ...string) bool {
+	for _, value := range []string{row.DisplayName, row.Username, row.PlexUsername, row.JellyfinUsername, row.Email} {
+		if strings.TrimSpace(value) == "" {
 			continue
 		}
 		for _, name := range names {
@@ -104,8 +101,13 @@ func userMatches(row map[string]any, names ...string) bool {
 	return false
 }
 
-func seerrUsernameFields() []string {
-	return []string{"username", "plexUsername", "jellyfinUsername", "email"}
+func firstNonEmptyString(values ...string) string {
+	for _, value := range values {
+		if value = strings.TrimSpace(value); value != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 func firstString(row map[string]any, fields ...string) string {

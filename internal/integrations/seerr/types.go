@@ -57,3 +57,21 @@ type CreatedRequest struct {
 type requestResp struct {
 	Results []map[string]any `json:"results"`
 }
+
+type userDTO struct {
+	ID               int    `json:"id"`
+	DisplayName      string `json:"displayName"`
+	Username         string `json:"username"`
+	PlexUsername     string `json:"plexUsername"`
+	JellyfinUsername string `json:"jellyfinUsername"`
+	Email            string `json:"email"`
+}
+
+type userListDTO struct {
+	Results []userDTO `json:"results"`
+}
+
+type createdRequestDTO struct {
+	ID     int `json:"id"`
+	Status int `json:"status"`
+}

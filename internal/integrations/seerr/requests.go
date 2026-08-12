@@ -157,13 +157,11 @@ func (c *Client) CreateRequest(ctx context.Context, in CreateRequestInput) (Crea
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		return CreatedRequest{}, fmt.Errorf("seerr request failed: %s", seerrHTTPError(resp))
 	}
-	var row map[string]any
+	var row createdRequestDTO
 	if err := decodeSeerrJSON(resp, &row); err != nil {
 		return CreatedRequest{}, err
 	}
-	id, _ := directInt(row, "id")
-	statusCode, _ := directInt(row, "status")
-	return CreatedRequest{ID: id, Status: statusLabel(statusCode)}, nil
+	return CreatedRequest{ID: row.ID, Status: statusLabel(row.Status)}, nil
 }
 
 func requestTitle(row map[string]any) string {
