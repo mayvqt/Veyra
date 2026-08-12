@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -230,7 +231,21 @@ func (c *Client) PrimaryImage(ctx context.Context, itemID, tag, token string, ma
 	if contentType == "" {
 		contentType = "image/jpeg"
 	}
+	mediaType, _, err := mime.ParseMediaType(contentType)
+	if err != nil || !allowedImageMediaType(mediaType) {
+		resp.Body.Close()
+		return nil, fmt.Errorf("%s image returned unsupported content type", c.Name())
+	}
 	return &ImageResponse{Body: resp.Body, ContentType: contentType}, nil
+}
+
+func allowedImageMediaType(mediaType string) bool {
+	switch strings.ToLower(mediaType) {
+	case "image/avif", "image/gif", "image/jpeg", "image/png", "image/webp":
+		return true
+	default:
+		return false
+	}
 }
 
 func (c *Client) newRequest(ctx context.Context, method, path, token string, body io.Reader) (*http.Request, error) {

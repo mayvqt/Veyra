@@ -224,6 +224,21 @@ func TestPrimaryImageUsesDocumentedImageRoute(t *testing.T) {
 	defer img.Body.Close()
 }
 
+func TestPrimaryImageRejectsActiveContent(t *testing.T) {
+	c := newTestClient(t, config.MediaServerJellyfin, "http://mediaserver.local", "https://jf.example", "server-key")
+	c.http = &http.Client{Transport: testutil.RoundTripFunc(func(r *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: 200,
+			Body:       io.NopCloser(strings.NewReader("<script>alert(1)</script>")),
+			Header:     http.Header{"Content-Type": []string{"text/html"}},
+		}, nil
+	})}
+
+	if _, err := c.PrimaryImage(context.Background(), "item-1", "", "", 360); err == nil {
+		t.Fatal("expected active content to be rejected")
+	}
+}
+
 func TestAdminSummaryCollectsServerStats(t *testing.T) {
 	c := newTestClient(t, config.MediaServerJellyfin, "http://mediaserver.local", "https://jf.example", "server-key")
 	c.http = &http.Client{Transport: testutil.RoundTripFunc(func(r *http.Request) (*http.Response, error) {
