@@ -14,6 +14,7 @@ const (
 	DefaultSessionDuration  = 12 * time.Hour
 	RememberSessionDuration = 7 * 24 * time.Hour
 	sessionTouchInterval    = 90 * time.Second
+	adminCheckInterval      = 15 * time.Minute
 )
 
 type AdminStatusChecker interface {
@@ -73,7 +74,7 @@ func (s *Service) ResolveSession(ctx context.Context, rawID string) (Session, Us
 	sess := Session{IDHash: sessRow.IDHash, UserID: sessRow.UserID, MediaServerAccessTokenEncrypted: sessRow.MediaServerAccessTokenEncrypted, ExpiresAt: sessRow.ExpiresAt, CreatedAt: sessRow.CreatedAt, LastSeenAt: sessRow.LastSeenAt, AbsoluteExpiresAt: sessRow.AbsoluteExpiresAt, AdminCheckedAt: sessRow.AdminCheckedAt, IPAddress: sessRow.IPAddress, UserAgent: sessRow.UserAgent}
 	usr := User{ID: usrRow.ID, MediaServerUserID: usrRow.MediaServerUserID, Username: usrRow.Username, DisplayName: usrRow.DisplayName, IsAdmin: usrRow.IsAdmin}
 
-	if s.adminChecker != nil && (sess.AdminCheckedAt.IsZero() || time.Since(sess.AdminCheckedAt) >= 15*time.Minute) {
+	if s.adminChecker != nil && adminCheckDue(sess.AdminCheckedAt, now) {
 		token, decErr := s.crypto.Decrypt(sess.MediaServerAccessTokenEncrypted)
 		adminVerified := false
 		if decErr == nil && token != "" {
@@ -101,6 +102,10 @@ func (s *Service) ResolveSession(ctx context.Context, rawID string) (Session, Us
 	}
 
 	return sess, usr, nil
+}
+
+func adminCheckDue(lastChecked, now time.Time) bool {
+	return lastChecked.IsZero() || lastChecked.After(now) || now.Sub(lastChecked) >= adminCheckInterval
 }
 
 func (s *Service) DecryptSessionToken(enc string) (string, error) {

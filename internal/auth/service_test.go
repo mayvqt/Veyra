@@ -166,6 +166,34 @@ func TestResolveSessionRefreshesAdminEvery15Min(t *testing.T) {
 	}
 }
 
+func TestResolveSessionRefreshesAdminWhenCheckTimestampIsInFuture(t *testing.T) {
+	db := testDB(t)
+	defer db.Close()
+
+	urow, err := store.UpsertUserByMediaServerID(context.Background(), db, store.UserRow{MediaServerUserID: "jf-clock-skew", Username: "admin", IsAdmin: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	checker := &checkerStub{isAdmin: false}
+	svc := NewService(db, security.NewCrypto("12345678901234567890123456789012"), testSessionSecret, checker)
+	raw, err := svc.CreateSession(context.Background(), User{ID: urow.ID, MediaServerUserID: urow.MediaServerUserID, Username: urow.Username, IsAdmin: true}, "tok", httptest.NewRequest("GET", "/", nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	idHash := security.HashSessionID(testSessionSecret, raw)
+	if err := store.UpdateSessionAdminCheckedAt(context.Background(), db, idHash, time.Now().Add(24*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+
+	_, user, err := svc.ResolveSession(context.Background(), raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if user.IsAdmin || checker.calls != 1 {
+		t.Fatalf("future check timestamp bypassed permission refresh: user=%+v calls=%d", user, checker.calls)
+	}
+}
+
 func TestResolveSessionPermissionChangeWritesAuditLog(t *testing.T) {
 	db := testDB(t)
 	defer db.Close()
