@@ -122,11 +122,10 @@ func (h *Handlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 		go func() {
 			defer wg.Done()
 			cacheKey := "requests:recent:v2:" + seerrUserCacheKey(seerrUser, u)
-			if !cacheGetJSON(r.Context(), h.db, cacheKey, &recentRequests) {
-				if reqs, err := h.seerr.RecentRequestsForUser(r.Context(), seerrUser, 5); err == nil {
-					recentRequests = reqs
-					h.cacheSetJSON(r.Context(), cacheKey, recentRequests, cacheTTLWidget)
-				}
+			if reqs, err := cacheLoadJSON(h, r.Context(), cacheKey, cacheTTLWidget, func() ([]dashboard.RequestItem, error) {
+				return h.seerr.RecentRequestsForUser(r.Context(), seerrUser, 5)
+			}); err == nil {
+				recentRequests = reqs
 			}
 		}()
 	}
@@ -135,17 +134,20 @@ func (h *Handlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			var q seerr.Quota
 			cacheKey := "requests:quota:" + seerrUserCacheKey(seerrUser, u)
-			if cacheGetJSON(r.Context(), h.db, cacheKey, &q) {
+			q, err := cacheLoadJSON(h, r.Context(), cacheKey, cacheTTLWidget, func() (seerr.Quota, error) {
+				qq, err := h.seerr.UserQuotaForUser(r.Context(), seerrUser)
+				if err != nil {
+					return seerr.Quota{}, err
+				}
+				if qq == nil {
+					return seerr.Quota{}, fmt.Errorf("quota unavailable")
+				}
+				return *qq, nil
+			})
+			if err == nil {
 				quota = quotaViewValues(q)
 				quotaNote = ""
-				return
-			}
-			if qq, err := h.seerr.UserQuotaForUser(r.Context(), seerrUser); err == nil && qq != nil {
-				quota = quotaViewValues(*qq)
-				quotaNote = ""
-				h.cacheSetJSON(r.Context(), cacheKey, *qq, cacheTTLWidget)
 				return
 			}
 			if seerrUser.ID == 0 {
@@ -161,10 +163,9 @@ func (h *Handlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 		go func() {
 			defer wg.Done()
 			cacheKey := "downloads:queue"
-			if !cacheGetJSON(r.Context(), h.db, cacheKey, &downloadQueue) {
-				downloadQueue = h.combinedDownloadQueue(r.Context(), 0)
-				h.cacheSetJSON(r.Context(), cacheKey, downloadQueue, cacheTTLHealth)
-			}
+			downloadQueue, _ = cacheLoadJSON(h, r.Context(), cacheKey, cacheTTLHealth, func() ([]dashboard.QueueItem, error) {
+				return h.combinedDownloadQueue(r.Context(), 0), nil
+			})
 		}()
 	}
 
@@ -318,11 +319,9 @@ func combineUpcomingCalendar(ctx context.Context, debug func(string, ...any), st
 
 func (h *Handlers) loadUpcomingCalendarWeek(ctx context.Context, start, end time.Time) []dashboard.CalendarItem {
 	cacheKey := "calendar:upcoming:" + start.Format("2006-01-02")
-	var items []dashboard.CalendarItem
-	if !cacheGetJSON(ctx, h.db, cacheKey, &items) {
-		items = h.combinedUpcomingCalendar(ctx, start, end, 0)
-		h.cacheSetJSON(ctx, cacheKey, items, cacheTTLCalendar)
-	}
+	items, _ := cacheLoadJSON(h, ctx, cacheKey, cacheTTLCalendar, func() ([]dashboard.CalendarItem, error) {
+		return h.combinedUpcomingCalendar(ctx, start, end, 0), nil
+	})
 	return items
 }
 

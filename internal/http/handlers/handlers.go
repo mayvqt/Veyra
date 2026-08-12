@@ -35,7 +35,7 @@ type Handlers struct {
 	loginLimiter interface {
 		Allow(ip, username string) bool
 	}
-	healthLocks sync.Map
+	cacheLocks sync.Map
 }
 
 type seerrIntegration interface {
@@ -287,27 +287,18 @@ func (h *Handlers) warnPersistence(operation string, err error) {
 }
 
 func (h *Handlers) cachedHealth(r *http.Request, key string, client integrations.Integration) integrations.HealthStatus {
-	var status integrations.HealthStatus
-	if cacheGetJSON(r.Context(), h.db, key, &status) {
-		return status
-	}
-	lock := h.healthLock(key)
-	lock.Lock()
-	defer lock.Unlock()
-	if cacheGetJSON(r.Context(), h.db, key, &status) {
-		return status
-	}
-	status = client.Health(r.Context())
-	h.cacheSetJSON(r.Context(), key, status, cacheTTLHealth)
+	status, _ := cacheLoadJSON(h, r.Context(), key, cacheTTLHealth, func() (integrations.HealthStatus, error) {
+		return client.Health(r.Context()), nil
+	})
 	return status
 }
 
-func (h *Handlers) healthLock(key string) *sync.Mutex {
-	if v, ok := h.healthLocks.Load(key); ok {
+func (h *Handlers) cacheLock(key string) *sync.Mutex {
+	if v, ok := h.cacheLocks.Load(key); ok {
 		return v.(*sync.Mutex)
 	}
 	mu := &sync.Mutex{}
-	actual, _ := h.healthLocks.LoadOrStore(key, mu)
+	actual, _ := h.cacheLocks.LoadOrStore(key, mu)
 	return actual.(*sync.Mutex)
 }
 
