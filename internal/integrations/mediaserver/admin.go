@@ -24,9 +24,10 @@ type AdminSummary struct {
 }
 
 type systemInfo struct {
-	ServerName      string `json:"ServerName"`
-	Version         string `json:"Version"`
-	OperatingSystem string `json:"OperatingSystem"`
+	ServerName                 string `json:"ServerName"`
+	Version                    string `json:"Version"`
+	OperatingSystem            string `json:"OperatingSystem"`
+	OperatingSystemDisplayName string `json:"OperatingSystemDisplayName"`
 }
 
 type itemCounts struct {
@@ -96,7 +97,11 @@ func (c *Client) AdminSummary(ctx context.Context) (AdminSummary, error) {
 	if err := c.getJSON(ctx, infoPath, c.apiKey, &info); err != nil {
 		return AdminSummary{}, err
 	}
-	out := AdminSummary{ServerName: info.ServerName, Version: info.Version, OperatingSystem: info.OperatingSystem}
+	operatingSystem := info.OperatingSystemDisplayName
+	if operatingSystem == "" {
+		operatingSystem = info.OperatingSystem
+	}
+	out := AdminSummary{ServerName: info.ServerName, Version: info.Version, OperatingSystem: operatingSystem}
 	if c.apiKey == "" {
 		return out, nil
 	}

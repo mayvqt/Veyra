@@ -340,7 +340,7 @@ func TestEmbyAdminSummaryUsesVirtualFoldersQuery(t *testing.T) {
 			if got := r.Header.Get("X-Emby-Token"); got != "server-key" {
 				t.Fatalf("expected system info request to use API key, got %q", got)
 			}
-			return response(http.StatusOK, `{"ServerName":"Emby","OperatingSystem":"Linux"}`), nil
+			return response(http.StatusOK, `{"ServerName":"Emby","OperatingSystem":"Linux","OperatingSystemDisplayName":"Ubuntu 24.04"}`), nil
 		case "/Sessions":
 			return response(http.StatusOK, `[]`), nil
 		case "/Users/Query":
@@ -358,7 +358,7 @@ func TestEmbyAdminSummaryUsesVirtualFoldersQuery(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if summary.LibraryCount != 2 || summary.UserCount != 2 || summary.OperatingSystem != "Linux" {
+	if summary.LibraryCount != 2 || summary.UserCount != 2 || summary.OperatingSystem != "Ubuntu 24.04" {
 		t.Fatalf("expected two Emby libraries and users, got %+v", summary)
 	}
 	if strings.Contains(strings.Join(summary.Warnings, "\n"), "Libraries unavailable") {
