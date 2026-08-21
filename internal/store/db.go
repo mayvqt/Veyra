@@ -56,7 +56,44 @@ func restrictDatabaseFiles(path string) error {
 }
 
 func InitSchema(ctx context.Context, db *sql.DB) error {
-	const schema = `
+	var currentVersion int
+	if err := db.QueryRowContext(ctx, `PRAGMA user_version`).Scan(&currentVersion); err != nil {
+		return fmt.Errorf("read schema version: %w", err)
+	}
+	if currentVersion > len(schemaMigrations) {
+		return fmt.Errorf("database schema version %d is newer than supported version %d", currentVersion, len(schemaMigrations))
+	}
+	for version, migration := range schemaMigrations {
+		targetVersion := version + 1
+		if currentVersion >= targetVersion {
+			continue
+		}
+		if err := applySchemaMigration(ctx, db, targetVersion, migration); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func applySchemaMigration(ctx context.Context, db *sql.DB, version int, migration string) error {
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin schema migration %d: %w", version, err)
+	}
+	defer tx.Rollback()
+	if _, err := tx.ExecContext(ctx, migration); err != nil {
+		return fmt.Errorf("apply schema migration %d: %w", version, err)
+	}
+	if _, err := tx.ExecContext(ctx, fmt.Sprintf(`PRAGMA user_version = %d`, version)); err != nil {
+		return fmt.Errorf("record schema migration %d: %w", version, err)
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit schema migration %d: %w", version, err)
+	}
+	return nil
+}
+
+var schemaMigrations = []string{`
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   media_server_user_id TEXT NOT NULL UNIQUE,
@@ -110,17 +147,4 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DE
 CREATE INDEX IF NOT EXISTS idx_audit_logs_action_created_at ON audit_logs(action, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);
 CREATE INDEX IF NOT EXISTS idx_cache_entries_expires_at ON cache_entries(expires_at);
-`
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("begin schema initialization: %w", err)
-	}
-	defer tx.Rollback()
-	if _, err := tx.ExecContext(ctx, schema); err != nil {
-		return fmt.Errorf("initialize schema: %w", err)
-	}
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("commit schema initialization: %w", err)
-	}
-	return nil
-}
+`}

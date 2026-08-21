@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"os"
 	"path/filepath"
 	"testing"
@@ -57,5 +58,32 @@ func TestMigrateInitializesFreshSchemaAndIsRepeatable(t *testing.T) {
 	}
 	if name != "users" {
 		t.Fatalf("expected users table, got %q", name)
+	}
+}
+
+func TestInitSchemaRecordsCurrentMigrationVersion(t *testing.T) {
+	db := testDB(t)
+	defer db.Close()
+
+	var version int
+	if err := db.QueryRow(`PRAGMA user_version`).Scan(&version); err != nil {
+		t.Fatal(err)
+	}
+	if version != len(schemaMigrations) {
+		t.Fatalf("schema version = %d, want %d", version, len(schemaMigrations))
+	}
+}
+
+func TestInitSchemaRejectsNewerDatabase(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if _, err := db.Exec(`PRAGMA user_version = 999`); err != nil {
+		t.Fatal(err)
+	}
+	if err := InitSchema(context.Background(), db); err == nil {
+		t.Fatal("expected newer database schema to be rejected")
 	}
 }
