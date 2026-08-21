@@ -52,14 +52,12 @@ func (h *Handlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 		StaticVersion:           buildinfo.Version,
 	}
 
-	if cookie, err := r.Cookie(middleware.SessionCookieName); err == nil && cookie.Value != "" {
-		if sess, _, err := h.authSvc.ResolveSession(r.Context(), cookie.Value); err == nil {
-			view.SessionCreatedAt = formatSessionTime(sess.CreatedAt)
-			view.SessionLastSeenAt = formatSessionTime(sess.LastSeenAt)
-			view.SessionExpiresAt = formatSessionTime(sess.ExpiresAt)
-			view.SessionIP = sess.IPAddress
-			view.SessionUserAgent = sess.UserAgent
-		}
+	if sess, ok := middleware.SessionFromContext(r.Context()); ok {
+		view.SessionCreatedAt = formatSessionTime(sess.CreatedAt)
+		view.SessionLastSeenAt = formatSessionTime(sess.LastSeenAt)
+		view.SessionExpiresAt = formatSessionTime(sess.ExpiresAt)
+		view.SessionIP = sess.IPAddress
+		view.SessionUserAgent = sess.UserAgent
 	}
 
 	var seerrUser seerr.UserIdentity

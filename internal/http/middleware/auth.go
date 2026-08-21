@@ -14,6 +14,7 @@ type ctxKey string
 const (
 	SessionCookieName = "veyra_session"
 	userKey           = ctxKey("auth_user")
+	sessionKey        = ctxKey("auth_session")
 )
 
 type SessionResolver interface {
@@ -32,13 +33,14 @@ func RequireAuth(svc SessionResolver) func(http.Handler) http.Handler {
 				requireAuthFailed(w, r)
 				return
 			}
-			_, user, err := svc.ResolveSession(r.Context(), cookie.Value)
+			session, user, err := svc.ResolveSession(r.Context(), cookie.Value)
 			if err != nil {
 				requireAuthFailed(w, r)
 				return
 			}
 			setRequestLogUsername(r.Context(), user.Username)
 			ctx := context.WithValue(r.Context(), userKey, user)
+			ctx = context.WithValue(ctx, sessionKey, session)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
@@ -72,4 +74,9 @@ func isAPIRequest(r *http.Request) bool {
 func UserFromContext(ctx context.Context) (auth.User, bool) {
 	u, ok := ctx.Value(userKey).(auth.User)
 	return u, ok
+}
+
+func SessionFromContext(ctx context.Context) (auth.Session, bool) {
+	session, ok := ctx.Value(sessionKey).(auth.Session)
+	return session, ok
 }
