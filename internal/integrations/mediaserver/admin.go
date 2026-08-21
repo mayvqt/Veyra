@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sort"
 	"sync"
 )
 
@@ -39,18 +40,18 @@ type userSummary struct {
 	Name string `json:"Name"`
 }
 
-type userPayload struct {
-	Items []userSummary
+type itemsPayload[T any] struct {
+	Items []T
 }
 
-func (p *userPayload) UnmarshalJSON(data []byte) error {
+func (p *itemsPayload[T]) UnmarshalJSON(data []byte) error {
 	data = bytes.TrimSpace(data)
 	if len(data) == 0 {
 		return nil
 	}
 	if data[0] != '[' {
 		var wrapped struct {
-			Items []userSummary `json:"Items"`
+			Items []T `json:"Items"`
 		}
 		if err := json.Unmarshal(data, &wrapped); err != nil {
 			return err
@@ -61,37 +62,8 @@ func (p *userPayload) UnmarshalJSON(data []byte) error {
 	return json.Unmarshal(data, &p.Items)
 }
 
-type libraryPayload struct {
-	Items []struct {
-		Name string `json:"Name"`
-	} `json:"Items"`
-}
-
-func (p *libraryPayload) UnmarshalJSON(data []byte) error {
-	data = bytes.TrimSpace(data)
-	if len(data) == 0 {
-		return nil
-	}
-	if data[0] != '[' {
-		var wrapped struct {
-			Items []struct {
-				Name string `json:"Name"`
-			} `json:"Items"`
-		}
-		if err := json.Unmarshal(data, &wrapped); err != nil {
-			return err
-		}
-		p.Items = wrapped.Items
-		return nil
-	}
-	var items []struct {
-		Name string `json:"Name"`
-	}
-	if err := json.Unmarshal(data, &items); err != nil {
-		return err
-	}
-	p.Items = items
-	return nil
+type librarySummary struct {
+	Name string `json:"Name"`
 }
 
 type PlaybackSession struct {
@@ -129,9 +101,9 @@ func (c *Client) AdminSummary(ctx context.Context) (AdminSummary, error) {
 		return out, nil
 	}
 	var (
-		users    userPayload
+		users    itemsPayload[userSummary]
 		counts   itemCounts
-		libs     libraryPayload
+		libs     itemsPayload[librarySummary]
 		sessions []sessionPayload
 		warnings []string
 		mu       sync.Mutex
@@ -163,6 +135,7 @@ func (c *Client) AdminSummary(ctx context.Context) (AdminSummary, error) {
 		recordWarning("Sessions", c.getJSON(ctx, "/Sessions", c.apiKey, &sessions))
 	}()
 	wg.Wait()
+	sort.Strings(warnings)
 	out.UserCount = len(users.Items)
 	out.MovieCount = counts.MovieCount
 	out.SeriesCount = counts.SeriesCount

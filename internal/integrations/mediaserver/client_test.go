@@ -441,3 +441,27 @@ func TestAdminSummaryKeepsPartialStatsWarnings(t *testing.T) {
 		t.Fatalf("expected users warning, got %+v", summary.Warnings)
 	}
 }
+
+func TestAdminSummarySortsConcurrentWarnings(t *testing.T) {
+	c := newTestClient(t, config.MediaServerEmby, "http://emby.local", "https://emby.example", "server-key")
+	c.http = &http.Client{Transport: testutil.RoundTripFunc(func(r *http.Request) (*http.Response, error) {
+		if r.URL.Path == "/System/Info" {
+			return response(http.StatusOK, `{"ServerName":"Emby"}`), nil
+		}
+		return response(http.StatusServiceUnavailable, ""), nil
+	})}
+
+	summary, err := c.AdminSummary(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantPrefixes := []string{"Item counts unavailable", "Libraries unavailable", "Sessions unavailable", "Users unavailable"}
+	if len(summary.Warnings) != len(wantPrefixes) {
+		t.Fatalf("warnings = %+v", summary.Warnings)
+	}
+	for i, prefix := range wantPrefixes {
+		if !strings.HasPrefix(summary.Warnings[i], prefix) {
+			t.Fatalf("warning %d = %q, want prefix %q", i, summary.Warnings[i], prefix)
+		}
+	}
+}
