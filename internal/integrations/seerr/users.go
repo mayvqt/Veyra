@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/mayvqt/veyra/internal/integrations"
 )
 
 func (c *Client) ResolveUser(ctx context.Context, username, displayName string) (*UserIdentity, error) {
@@ -23,7 +25,7 @@ func (c *Client) ResolveUser(ctx context.Context, username, displayName string) 
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return nil, fmt.Errorf("seerr user list failed: %d", resp.StatusCode)
+		return nil, integrations.NewHTTPStatusError("Seerr", "user list", resp.StatusCode)
 	}
 	var payload userListDTO
 	if err := decodeLimitedSeerrJSON(resp.Body, &payload); err != nil {
@@ -57,7 +59,7 @@ func (c *Client) ResolveUserByMediaServerID(ctx context.Context, mediaServerUser
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return nil, fmt.Errorf("seerr media server user lookup failed: %d", resp.StatusCode)
+		return nil, integrations.NewHTTPStatusError("Seerr", "media server user lookup", resp.StatusCode)
 	}
 	var row userDTO
 	if err := decodeLimitedSeerrJSON(resp.Body, &row); err != nil {

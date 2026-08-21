@@ -175,7 +175,7 @@ func (c *Client) fetchLatestByTypes(ctx context.Context, userID, token string, l
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return nil, fmt.Errorf("%s latest failed: %d", c.Name(), resp.StatusCode)
+		return nil, integrations.NewHTTPStatusError(c.Name(), "latest items", resp.StatusCode)
 	}
 
 	var rows []latestItem
@@ -253,7 +253,7 @@ func (c *Client) PrimaryImage(ctx context.Context, itemID, tag, token string, ma
 	}
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		resp.Body.Close()
-		return nil, fmt.Errorf("%s image failed: %d", c.Name(), resp.StatusCode)
+		return nil, integrations.NewHTTPStatusError(c.Name(), "primary image", resp.StatusCode)
 	}
 	contentType := resp.Header.Get("Content-Type")
 	if contentType == "" {

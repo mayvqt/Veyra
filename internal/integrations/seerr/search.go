@@ -30,7 +30,7 @@ func (c *Client) Search(ctx context.Context, query string, limit int) ([]SearchR
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return nil, fmt.Errorf("seerr search failed: %s", seerrHTTPError(resp))
+		return nil, seerrHTTPError(resp, "search")
 	}
 	var payload requestResp
 	if err := decodeLimitedSeerrJSON(resp.Body, &payload); err != nil {

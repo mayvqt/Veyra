@@ -1,9 +1,21 @@
 package integrations
 
 import (
+	"fmt"
+	"net/http"
 	"strings"
 	"testing"
 )
+
+func TestHTTPStatusError(t *testing.T) {
+	err := fmt.Errorf("fetch users: %w", NewHTTPStatusError("Emby", "/Users/Query", http.StatusNotFound))
+	if !IsHTTPStatus(err, http.StatusNotFound) {
+		t.Fatalf("expected wrapped 404 to be recognized: %v", err)
+	}
+	if IsHTTPStatus(err, http.StatusUnauthorized) {
+		t.Fatal("404 was incorrectly recognized as unauthorized")
+	}
+}
 
 func TestDecodeJSON(t *testing.T) {
 	t.Run("decodes one value", func(t *testing.T) {

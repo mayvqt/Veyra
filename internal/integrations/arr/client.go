@@ -325,7 +325,7 @@ func (c *Client) UpcomingWindow(ctx context.Context, start, end time.Time, limit
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return nil, fmt.Errorf("%s calendar failed: %d", c.name, resp.StatusCode)
+		return nil, integrations.NewHTTPStatusError(c.name, "calendar", resp.StatusCode)
 	}
 	var rows []map[string]any
 	if err := decodeArrJSON(resp.Body, &rows); err != nil {
@@ -423,7 +423,7 @@ func (c *Client) queuePage(ctx context.Context, page, pageSize int) ([]map[strin
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return nil, 0, fmt.Errorf("%s queue failed: %d", c.name, resp.StatusCode)
+		return nil, 0, integrations.NewHTTPStatusError(c.name, "queue", resp.StatusCode)
 	}
 	var payload any
 	if err := decodeArrJSON(resp.Body, &payload); err != nil {

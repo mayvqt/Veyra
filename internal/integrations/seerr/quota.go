@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+
+	"github.com/mayvqt/veyra/internal/integrations"
 )
 
 func (c *Client) UserQuota(ctx context.Context) (*Quota, error) {
@@ -37,7 +39,7 @@ func (c *Client) userQuotaFrom(ctx context.Context, path string) (*Quota, error)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return nil, fmt.Errorf("status %d", resp.StatusCode)
+		return nil, integrations.NewHTTPStatusError("Seerr", "quota", resp.StatusCode)
 	}
 	var payload map[string]any
 	if err := decodeLimitedSeerrJSON(resp.Body, &payload); err != nil {

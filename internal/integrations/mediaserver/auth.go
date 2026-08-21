@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/mayvqt/veyra/internal/integrations"
 )
 
 type AuthenticatedUser struct {
@@ -51,7 +53,11 @@ func (c *Client) Authenticate(ctx context.Context, username, password string) (A
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return AuthenticatedUser{}, "", fmt.Errorf("%s rejected credentials", c.Name())
+		statusErr := integrations.NewHTTPStatusError(c.Name(), "authentication", resp.StatusCode)
+		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+			return AuthenticatedUser{}, "", fmt.Errorf("%s rejected credentials: %w", c.Name(), statusErr)
+		}
+		return AuthenticatedUser{}, "", statusErr
 	}
 
 	var payload authenticationResponse
@@ -95,7 +101,7 @@ func (c *Client) Logout(ctx context.Context, token string) error {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		return fmt.Errorf("%s logout failed: HTTP %d", c.Name(), resp.StatusCode)
+		return integrations.NewHTTPStatusError(c.Name(), "logout", resp.StatusCode)
 	}
 	return nil
 }

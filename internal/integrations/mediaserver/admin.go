@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"sort"
 	"sync"
+
+	"github.com/mayvqt/veyra/internal/integrations"
 )
 
 type AdminSummary struct {
@@ -179,7 +181,7 @@ func (c *Client) getJSON(ctx context.Context, path, token string, out any) error
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return fmt.Errorf("%s %s failed: %d", c.Name(), path, resp.StatusCode)
+		return integrations.NewHTTPStatusError(c.Name(), path, resp.StatusCode)
 	}
 	return decodeMediaServerJSON(resp.Body, out)
 }

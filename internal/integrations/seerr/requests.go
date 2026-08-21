@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/mayvqt/veyra/internal/dashboard"
+	"github.com/mayvqt/veyra/internal/integrations"
 )
 
 const (
@@ -83,7 +84,7 @@ func (c *Client) recentRequestsFrom(ctx context.Context, path string, limit int)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return nil, fmt.Errorf("seerr request list failed: %d", resp.StatusCode)
+		return nil, integrations.NewHTTPStatusError("Seerr", "request list", resp.StatusCode)
 	}
 	var payload requestResp
 	if err := decodeLimitedSeerrJSON(resp.Body, &payload); err != nil {
@@ -155,7 +156,7 @@ func (c *Client) CreateRequest(ctx context.Context, in CreateRequestInput) (Crea
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return CreatedRequest{}, fmt.Errorf("seerr request failed: %s", seerrHTTPError(resp))
+		return CreatedRequest{}, seerrHTTPError(resp, "create request")
 	}
 	var row createdRequestDTO
 	if err := decodeSeerrJSON(resp, &row); err != nil {

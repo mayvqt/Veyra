@@ -2,11 +2,48 @@ package integrations
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"time"
 )
+
+type HTTPStatusError struct {
+	Service    string
+	Operation  string
+	StatusCode int
+	Detail     string
+}
+
+func (e *HTTPStatusError) Error() string {
+	status := http.StatusText(e.StatusCode)
+	if status == "" {
+		status = "unknown status"
+	}
+	prefix := e.Service
+	if e.Operation != "" {
+		prefix += " " + e.Operation
+	}
+	message := fmt.Sprintf("%s failed: HTTP %d %s", prefix, e.StatusCode, status)
+	if e.Detail != "" {
+		message += ": " + e.Detail
+	}
+	return message
+}
+
+func NewHTTPStatusErrorWithDetail(service, operation string, statusCode int, detail string) error {
+	return &HTTPStatusError{Service: service, Operation: operation, StatusCode: statusCode, Detail: detail}
+}
+
+func NewHTTPStatusError(service, operation string, statusCode int) error {
+	return &HTTPStatusError{Service: service, Operation: operation, StatusCode: statusCode}
+}
+
+func IsHTTPStatus(err error, statusCode int) bool {
+	var statusErr *HTTPStatusError
+	return errors.As(err, &statusErr) && statusErr.StatusCode == statusCode
+}
 
 // NewHTTPClient returns a bounded client that refuses redirects so credentials
 // cannot be replayed to an unexpected or downgraded destination.

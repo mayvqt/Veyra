@@ -73,16 +73,16 @@ func anySlicePath(row map[string]any, keys ...string) ([]any, bool) {
 	return out, ok
 }
 
-func seerrHTTPError(resp *http.Response) string {
+func seerrHTTPError(resp *http.Response, operation string) error {
 	var payload map[string]any
 	if err := decodeLimitedSeerrJSON(resp.Body, &payload); err == nil {
 		for _, key := range []string{"message", "error"} {
 			if msg, ok := payload[key].(string); ok && strings.TrimSpace(msg) != "" {
-				return fmt.Sprintf("%d %s", resp.StatusCode, strings.TrimSpace(msg))
+				return integrations.NewHTTPStatusErrorWithDetail("Seerr", operation, resp.StatusCode, strings.TrimSpace(msg))
 			}
 		}
 	}
-	return fmt.Sprintf("HTTP %d", resp.StatusCode)
+	return integrations.NewHTTPStatusError("Seerr", operation, resp.StatusCode)
 }
 
 func decodeSeerrJSON(resp *http.Response, out any) error {
