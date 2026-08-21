@@ -311,6 +311,35 @@ func TestAdminSummaryAcceptsArrayLibraryPayload(t *testing.T) {
 	}
 }
 
+func TestEmbyAdminSummaryUsesVirtualFoldersQuery(t *testing.T) {
+	c := newTestClient(t, config.MediaServerEmby, "http://emby.local", "https://emby.example", "server-key")
+	c.http = &http.Client{Transport: testutil.RoundTripFunc(func(r *http.Request) (*http.Response, error) {
+		switch r.URL.Path {
+		case "/System/Info/Public":
+			return response(http.StatusOK, `{"ServerName":"Emby"}`), nil
+		case "/Users", "/Sessions":
+			return response(http.StatusOK, `[]`), nil
+		case "/Items/Counts":
+			return response(http.StatusOK, `{}`), nil
+		case "/Library/VirtualFolders/Query":
+			return response(http.StatusOK, `{"Items":[{"Name":"Movies"},{"Name":"Shows"}],"TotalRecordCount":2}`), nil
+		default:
+			return response(http.StatusNotFound, ""), nil
+		}
+	})}
+
+	summary, err := c.AdminSummary(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if summary.LibraryCount != 2 {
+		t.Fatalf("expected two Emby libraries, got %+v", summary)
+	}
+	if strings.Contains(strings.Join(summary.Warnings, "\n"), "Libraries unavailable") {
+		t.Fatalf("expected no Emby library warning, got %+v", summary.Warnings)
+	}
+}
+
 func TestAdminSummaryFetchesIndependentDetailsConcurrently(t *testing.T) {
 	c := newTestClient(t, config.MediaServerJellyfin, "http://mediaserver.local", "https://jf.example", "server-key")
 	started := make(chan string, 4)

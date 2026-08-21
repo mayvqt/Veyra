@@ -33,6 +33,10 @@ func (jellyfinProvider) LatestItemsPath(userID, itemTypes string, limit int) str
 	return "/Items/Latest?" + query.Encode()
 }
 
+func (jellyfinProvider) VirtualFoldersPath() string {
+	return "/Library/VirtualFolders"
+}
+
 func (jellyfinProvider) ItemURL(publicURL, itemID string) string {
 	return publicURL + "/web/#/details?id=" + url.QueryEscape(itemID)
 }

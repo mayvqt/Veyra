@@ -130,7 +130,7 @@ func (c *Client) AdminSummary(ctx context.Context) (AdminSummary, error) {
 	}()
 	go func() {
 		defer wg.Done()
-		recordWarning("Libraries", c.getJSON(ctx, "/Library/VirtualFolders", c.apiKey, &libs))
+		recordWarning("Libraries", c.getJSON(ctx, c.provider.VirtualFoldersPath(), c.apiKey, &libs))
 	}()
 	go func() {
 		defer wg.Done()

@@ -62,6 +62,18 @@ func TestProviderItemLinksAreProviderSpecific(t *testing.T) {
 	}
 }
 
+func TestProviderVirtualFolderRoutesAreProviderSpecific(t *testing.T) {
+	jellyfin, _ := newProvider(config.MediaServerJellyfin)
+	emby, _ := newProvider(config.MediaServerEmby)
+
+	if got := jellyfin.VirtualFoldersPath(); got != "/Library/VirtualFolders" {
+		t.Fatalf("unexpected Jellyfin virtual folders path %q", got)
+	}
+	if got := emby.VirtualFoldersPath(); got != "/Library/VirtualFolders/Query" {
+		t.Fatalf("unexpected Emby virtual folders path %q", got)
+	}
+}
+
 func TestProviderTokenAuthorizationIsShared(t *testing.T) {
 	for _, serverType := range []config.MediaServerType{config.MediaServerJellyfin, config.MediaServerEmby} {
 		provider, err := newProvider(serverType)
