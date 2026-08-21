@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"sort"
@@ -149,7 +150,7 @@ func (h *Handlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 		loaders = append(loaders, func() {
 			cacheKey := "downloads:queue"
 			downloadQueue, _ = cacheLoadJSON(h, r.Context(), cacheKey, cacheTTLHealth, func() ([]dashboard.QueueItem, error) {
-				return h.combinedDownloadQueue(r.Context(), 0), nil
+				return h.combinedDownloadQueue(r.Context(), 0)
 			})
 		})
 	}
@@ -212,7 +213,7 @@ func runConcurrently(tasks ...func()) {
 	wg.Wait()
 }
 
-func (h *Handlers) combinedDownloadQueue(ctx context.Context, limit int) []dashboard.QueueItem {
+func (h *Handlers) combinedDownloadQueue(ctx context.Context, limit int) ([]dashboard.QueueItem, error) {
 	return combineDownloadQueue(ctx, h.debug, limit, h.sonarr, h.radarr)
 }
 
@@ -221,37 +222,48 @@ type downloadQueueClient interface {
 	Queue(ctx context.Context, limit int) ([]dashboard.QueueItem, error)
 }
 
-func combineDownloadQueue(ctx context.Context, debug func(string, ...any), limit int, clients ...downloadQueueClient) []dashboard.QueueItem {
+func combineDownloadQueue(ctx context.Context, debug func(string, ...any), limit int, clients ...downloadQueueClient) ([]dashboard.QueueItem, error) {
 	out := make([]dashboard.QueueItem, 0, max(limit, minCollectionCapacity))
 	var (
-		mu sync.Mutex
-		wg sync.WaitGroup
+		mu        sync.Mutex
+		wg        sync.WaitGroup
+		attempted int
+		succeeded int
+		failures  []error
 	)
 	for _, client := range clients {
 		if client == nil {
 			continue
 		}
+		attempted++
 		wg.Add(1)
 		go func(client downloadQueueClient) {
 			defer wg.Done()
 			items, err := client.Queue(ctx, limit)
 			if err != nil {
 				debug("download queue unavailable", "service", client.Name(), "err", security.RedactErr(err))
+				mu.Lock()
+				failures = append(failures, err)
+				mu.Unlock()
 				return
 			}
 			debug("download queue fetched", "service", client.Name(), "count", len(items))
 			mu.Lock()
+			succeeded++
 			out = append(out, items...)
 			mu.Unlock()
 		}(client)
 	}
 	wg.Wait()
+	if attempted > 0 && succeeded == 0 {
+		return nil, fmt.Errorf("all download queue providers failed: %w", errors.Join(failures...))
+	}
 	sortDownloadQueueItems(out)
 	if limit > 0 && len(out) > limit {
 		out = out[:limit]
 	}
 	debug("download queue combined", "total", len(out), "limit", limit)
-	return out
+	return out, nil
 }
 
 func sortDownloadQueueItems(out []dashboard.QueueItem) {
@@ -275,7 +287,7 @@ func sortDownloadQueueItems(out []dashboard.QueueItem) {
 	})
 }
 
-func (h *Handlers) combinedUpcomingCalendar(ctx context.Context, start, end time.Time, limit int) []dashboard.CalendarItem {
+func (h *Handlers) combinedUpcomingCalendar(ctx context.Context, start, end time.Time, limit int) ([]dashboard.CalendarItem, error) {
 	return combineUpcomingCalendar(ctx, h.debug, start, end, limit, h.sonarr, h.radarr)
 }
 
@@ -284,38 +296,49 @@ type upcomingCalendarClient interface {
 	UpcomingWindow(ctx context.Context, start, end time.Time, limit int) ([]dashboard.CalendarItem, error)
 }
 
-func combineUpcomingCalendar(ctx context.Context, debug func(string, ...any), start, end time.Time, limit int, clients ...upcomingCalendarClient) []dashboard.CalendarItem {
+func combineUpcomingCalendar(ctx context.Context, debug func(string, ...any), start, end time.Time, limit int, clients ...upcomingCalendarClient) ([]dashboard.CalendarItem, error) {
 	out := make([]dashboard.CalendarItem, 0, max(limit, minCollectionCapacity))
 	var (
-		mu sync.Mutex
-		wg sync.WaitGroup
+		mu        sync.Mutex
+		wg        sync.WaitGroup
+		attempted int
+		succeeded int
+		failures  []error
 	)
 	for _, client := range clients {
 		if client == nil {
 			continue
 		}
+		attempted++
 		wg.Add(1)
 		go func(client upcomingCalendarClient) {
 			defer wg.Done()
 			items, err := client.UpcomingWindow(ctx, start, end, limit)
 			if err != nil {
 				debug("calendar unavailable", "service", client.Name(), "err", security.RedactErr(err))
+				mu.Lock()
+				failures = append(failures, err)
+				mu.Unlock()
 				return
 			}
 			mu.Lock()
+			succeeded++
 			out = append(out, items...)
 			mu.Unlock()
 		}(client)
 	}
 	wg.Wait()
+	if attempted > 0 && succeeded == 0 {
+		return nil, fmt.Errorf("all calendar providers failed: %w", errors.Join(failures...))
+	}
 	sortCalendarItems(out)
-	return limitCalendarItems(out, limit)
+	return limitCalendarItems(out, limit), nil
 }
 
 func (h *Handlers) loadUpcomingCalendarWeek(ctx context.Context, start, end time.Time) []dashboard.CalendarItem {
 	cacheKey := "calendar:upcoming:" + start.Format("2006-01-02")
 	items, _ := cacheLoadJSON(h, ctx, cacheKey, cacheTTLCalendar, func() ([]dashboard.CalendarItem, error) {
-		return h.combinedUpcomingCalendar(ctx, start, end, 0), nil
+		return h.combinedUpcomingCalendar(ctx, start, end, 0)
 	})
 	return items
 }

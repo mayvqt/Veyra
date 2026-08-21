@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -79,33 +80,42 @@ func TestGroupCalendarItems(t *testing.T) {
 func TestCombinedDownloadQueueFetchesArrClientsConcurrently(t *testing.T) {
 	started := make(chan string, 2)
 	release := make(chan struct{})
-	done := make(chan []dashboard.QueueItem, 1)
+	type result struct {
+		items []dashboard.QueueItem
+		err   error
+	}
+	done := make(chan result, 1)
 
 	go func() {
-		done <- combineDownloadQueue(
+		items, err := combineDownloadQueue(
 			context.Background(),
 			func(string, ...any) {},
 			10,
 			blockingQueueClient{name: "Sonarr", started: started, release: release, items: []dashboard.QueueItem{{Title: "Andor", Source: "Sonarr", Progress: 75}}},
 			blockingQueueClient{name: "Radarr", started: started, release: release, items: []dashboard.QueueItem{{Title: "Heat", Source: "Radarr", Progress: 50}}},
 		)
+		done <- result{items: items, err: err}
 	}()
 
 	testutil.WaitForSignals(t, started, 300*time.Millisecond, "Sonarr", "Radarr")
 	close(release)
-	items := <-done
-	if len(items) != 2 {
-		t.Fatalf("expected both queue results, got %+v", items)
+	got := <-done
+	if got.err != nil || len(got.items) != 2 {
+		t.Fatalf("expected both queue results, got items=%+v err=%v", got.items, got.err)
 	}
 }
 
 func TestCombinedUpcomingCalendarFetchesArrClientsConcurrently(t *testing.T) {
 	started := make(chan string, 2)
 	release := make(chan struct{})
-	done := make(chan []dashboard.CalendarItem, 1)
+	type result struct {
+		items []dashboard.CalendarItem
+		err   error
+	}
+	done := make(chan result, 1)
 
 	go func() {
-		done <- combineUpcomingCalendar(
+		items, err := combineUpcomingCalendar(
 			context.Background(),
 			func(string, ...any) {},
 			time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC),
@@ -114,14 +124,58 @@ func TestCombinedUpcomingCalendarFetchesArrClientsConcurrently(t *testing.T) {
 			blockingCalendarClient{name: "Sonarr", started: started, release: release, items: []dashboard.CalendarItem{{Title: "Andor", Source: "Sonarr", AirsAt: time.Date(2026, 6, 1, 3, 0, 0, 0, time.UTC)}}},
 			blockingCalendarClient{name: "Radarr", started: started, release: release, items: []dashboard.CalendarItem{{Title: "Heat 2", Source: "Radarr", AirsAt: time.Date(2026, 6, 2, 0, 0, 0, 0, time.UTC)}}},
 		)
+		done <- result{items: items, err: err}
 	}()
 
 	testutil.WaitForSignals(t, started, 300*time.Millisecond, "Sonarr", "Radarr")
 	close(release)
-	items := <-done
-	if len(items) != 2 {
-		t.Fatalf("expected both calendar results, got %+v", items)
+	got := <-done
+	if got.err != nil || len(got.items) != 2 {
+		t.Fatalf("expected both calendar results, got items=%+v err=%v", got.items, got.err)
 	}
+}
+
+func TestArrCombinersReportCompleteFailure(t *testing.T) {
+	queue, queueErr := combineDownloadQueue(context.Background(), func(string, ...any) {}, 10, failingArrClient{name: "Sonarr"}, failingArrClient{name: "Radarr"})
+	if queueErr == nil || queue != nil {
+		t.Fatalf("queue = %+v, err = %v; want complete failure", queue, queueErr)
+	}
+	calendar, calendarErr := combineUpcomingCalendar(context.Background(), func(string, ...any) {}, time.Now(), time.Now().Add(time.Hour), 10, failingArrClient{name: "Sonarr"}, failingArrClient{name: "Radarr"})
+	if calendarErr == nil || calendar != nil {
+		t.Fatalf("calendar = %+v, err = %v; want complete failure", calendar, calendarErr)
+	}
+}
+
+func TestArrCombinersKeepPartialResults(t *testing.T) {
+	success := successfulArrClient{name: "Sonarr"}
+	queue, queueErr := combineDownloadQueue(context.Background(), func(string, ...any) {}, 10, success, failingArrClient{name: "Radarr"})
+	if queueErr != nil || len(queue) != 1 {
+		t.Fatalf("queue = %+v, err = %v; want partial result", queue, queueErr)
+	}
+	calendar, calendarErr := combineUpcomingCalendar(context.Background(), func(string, ...any) {}, time.Now(), time.Now().Add(time.Hour), 10, success, failingArrClient{name: "Radarr"})
+	if calendarErr != nil || len(calendar) != 1 {
+		t.Fatalf("calendar = %+v, err = %v; want partial result", calendar, calendarErr)
+	}
+}
+
+type successfulArrClient struct{ name string }
+
+func (c successfulArrClient) Name() string { return c.name }
+func (c successfulArrClient) Queue(context.Context, int) ([]dashboard.QueueItem, error) {
+	return []dashboard.QueueItem{{Title: "Queue item"}}, nil
+}
+func (c successfulArrClient) UpcomingWindow(context.Context, time.Time, time.Time, int) ([]dashboard.CalendarItem, error) {
+	return []dashboard.CalendarItem{{Title: "Calendar item"}}, nil
+}
+
+type failingArrClient struct{ name string }
+
+func (c failingArrClient) Name() string { return c.name }
+func (c failingArrClient) Queue(context.Context, int) ([]dashboard.QueueItem, error) {
+	return nil, errors.New("unavailable")
+}
+func (c failingArrClient) UpcomingWindow(context.Context, time.Time, time.Time, int) ([]dashboard.CalendarItem, error) {
+	return nil, errors.New("unavailable")
 }
 
 type blockingQueueClient struct {
