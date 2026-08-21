@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"path/filepath"
 	"time"
 
 	"github.com/mayvqt/veyra/internal/buildinfo"
@@ -26,6 +27,9 @@ func Run(ctx context.Context) error {
 		return fmt.Errorf("open db: %w", err)
 	}
 	defer db.Close()
+	if err := store.CheckIntegrity(ctx, db); err != nil {
+		return fmt.Errorf("check db integrity: %w", err)
+	}
 
 	if err := store.InitSchema(ctx, db); err != nil {
 		return fmt.Errorf("initialize db schema: %w", err)
@@ -111,11 +115,42 @@ func runMaintenance(ctx context.Context, log *slog.Logger, db *sql.DB) {
 			n, err := store.DeleteExpiredCache(ctx, db, now)
 			if err != nil {
 				log.Warn("cache cleanup failed", "err", err)
-				continue
-			}
-			if n > 0 {
+			} else if n > 0 {
 				log.Debug("cache cleanup removed expired entries", "count", n)
+			}
+			checkpoint, err := store.CheckpointWAL(ctx, db)
+			if err != nil {
+				log.Warn("database checkpoint failed", "err", err)
+			} else if checkpoint.Busy {
+				log.Debug("database checkpoint deferred", "log_frames", checkpoint.LogFrames, "checkpointed_frames", checkpoint.CheckpointedFrames)
 			}
 		}
 	}
+}
+
+func Backup(ctx context.Context, destination string) error {
+	cfg, err := config.Load()
+	if err != nil {
+		return fmt.Errorf("load config: %w", err)
+	}
+	source, err := filepath.Abs(cfg.DatabasePath)
+	if err != nil {
+		return fmt.Errorf("resolve database path: %w", err)
+	}
+	target, err := filepath.Abs(destination)
+	if err != nil {
+		return fmt.Errorf("resolve backup path: %w", err)
+	}
+	if source == target {
+		return fmt.Errorf("backup destination must differ from database path")
+	}
+	db, err := store.OpenSQLite(cfg.DatabasePath)
+	if err != nil {
+		return fmt.Errorf("open db: %w", err)
+	}
+	defer db.Close()
+	if err := store.CheckIntegrity(ctx, db); err != nil {
+		return fmt.Errorf("check db integrity: %w", err)
+	}
+	return store.BackupSQLite(ctx, db, destination)
 }
