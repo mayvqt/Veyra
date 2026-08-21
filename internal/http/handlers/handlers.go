@@ -256,7 +256,6 @@ const (
 	cacheTTLWidget            = 45 * time.Second
 	cacheTTLCalendar          = 2 * time.Minute
 	cacheTTLResolvedUser      = 10 * time.Minute
-	minCollectionCapacity     = 8
 )
 
 func (h *Handlers) render(w http.ResponseWriter, name string, data ViewData) {
