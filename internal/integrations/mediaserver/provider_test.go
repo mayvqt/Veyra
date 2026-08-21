@@ -66,11 +66,11 @@ func TestProviderVirtualFolderRoutesAreProviderSpecific(t *testing.T) {
 	jellyfin, _ := newProvider(config.MediaServerJellyfin)
 	emby, _ := newProvider(config.MediaServerEmby)
 
-	if got := jellyfin.VirtualFoldersPath(); got != "/Library/VirtualFolders" {
-		t.Fatalf("unexpected Jellyfin virtual folders path %q", got)
+	if got := jellyfin.VirtualFoldersPaths(); len(got) != 1 || got[0] != "/Library/VirtualFolders" {
+		t.Fatalf("unexpected Jellyfin virtual folders paths %q", got)
 	}
-	if got := emby.VirtualFoldersPath(); got != "/Library/VirtualFolders/Query" {
-		t.Fatalf("unexpected Emby virtual folders path %q", got)
+	if got := emby.VirtualFoldersPaths(); len(got) != 2 || got[0] != "/Library/VirtualFolders/Query" || got[1] != "/Library/VirtualFolders" {
+		t.Fatalf("unexpected Emby virtual folders paths %q", got)
 	}
 }
 
@@ -78,11 +78,11 @@ func TestProviderUserRoutesAreProviderSpecific(t *testing.T) {
 	jellyfin, _ := newProvider(config.MediaServerJellyfin)
 	emby, _ := newProvider(config.MediaServerEmby)
 
-	if got := jellyfin.UsersPath(); got != "/Users" {
-		t.Fatalf("unexpected Jellyfin users path %q", got)
+	if got := jellyfin.UsersPaths(); len(got) != 1 || got[0] != "/Users" {
+		t.Fatalf("unexpected Jellyfin users paths %q", got)
 	}
-	if got := emby.UsersPath(); got != "/Users/Query" {
-		t.Fatalf("unexpected Emby users path %q", got)
+	if got := emby.UsersPaths(); len(got) != 2 || got[0] != "/Users/Query" || got[1] != "/Users" {
+		t.Fatalf("unexpected Emby users paths %q", got)
 	}
 }
 

@@ -366,6 +366,74 @@ func TestEmbyAdminSummaryUsesVirtualFoldersQuery(t *testing.T) {
 	}
 }
 
+func TestEmbyAdminSummaryFallsBackToLegacyRoutesOnNotFound(t *testing.T) {
+	c := newTestClient(t, config.MediaServerEmby, "http://emby.local", "https://emby.example", "server-key")
+	c.http = &http.Client{Transport: testutil.RoundTripFunc(func(r *http.Request) (*http.Response, error) {
+		switch r.URL.Path {
+		case "/System/Info":
+			return response(http.StatusOK, `{"ServerName":"Emby"}`), nil
+		case "/Users/Query", "/Library/VirtualFolders/Query":
+			return response(http.StatusNotFound, ""), nil
+		case "/Users":
+			return response(http.StatusOK, `[{"Id":"legacy-user","Name":"Legacy"}]`), nil
+		case "/Library/VirtualFolders":
+			return response(http.StatusOK, `[{"Name":"Legacy Library"}]`), nil
+		case "/Items/Counts":
+			return response(http.StatusOK, `{}`), nil
+		case "/Sessions":
+			return response(http.StatusOK, `[]`), nil
+		default:
+			return response(http.StatusNotFound, ""), nil
+		}
+	})}
+
+	summary, err := c.AdminSummary(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if summary.UserCount != 1 || summary.LibraryCount != 1 || len(summary.Warnings) != 0 {
+		t.Fatalf("unexpected legacy Emby summary: %+v", summary)
+	}
+}
+
+func TestEmbyAdminSummaryDoesNotFallbackOnAuthorizationFailure(t *testing.T) {
+	c := newTestClient(t, config.MediaServerEmby, "http://emby.local", "https://emby.example", "server-key")
+	var mu sync.Mutex
+	legacyCalls := 0
+	c.http = &http.Client{Transport: testutil.RoundTripFunc(func(r *http.Request) (*http.Response, error) {
+		switch r.URL.Path {
+		case "/System/Info":
+			return response(http.StatusOK, `{"ServerName":"Emby"}`), nil
+		case "/Users/Query", "/Library/VirtualFolders/Query":
+			return response(http.StatusUnauthorized, ""), nil
+		case "/Users", "/Library/VirtualFolders":
+			mu.Lock()
+			legacyCalls++
+			mu.Unlock()
+			return response(http.StatusOK, `[]`), nil
+		case "/Items/Counts":
+			return response(http.StatusOK, `{}`), nil
+		case "/Sessions":
+			return response(http.StatusOK, `[]`), nil
+		default:
+			return response(http.StatusNotFound, ""), nil
+		}
+	})}
+
+	summary, err := c.AdminSummary(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if legacyCalls != 0 {
+		t.Fatalf("legacy endpoints called %d times after authorization failures", legacyCalls)
+	}
+	if len(summary.Warnings) != 2 {
+		t.Fatalf("expected user and library warnings, got %+v", summary.Warnings)
+	}
+}
+
 func TestAdminSummaryFetchesIndependentDetailsConcurrently(t *testing.T) {
 	c := newTestClient(t, config.MediaServerJellyfin, "http://mediaserver.local", "https://jf.example", "server-key")
 	started := make(chan string, 4)

@@ -32,12 +32,12 @@ func (embyProvider) LatestItemsPath(userID, itemTypes string, limit int) string 
 	return fmt.Sprintf("/Users/%s/Items/Latest?%s", url.PathEscape(userID), query.Encode())
 }
 
-func (embyProvider) VirtualFoldersPath() string {
-	return "/Library/VirtualFolders/Query"
+func (embyProvider) VirtualFoldersPaths() []string {
+	return []string{"/Library/VirtualFolders/Query", "/Library/VirtualFolders"}
 }
 
-func (embyProvider) UsersPath() string {
-	return "/Users/Query"
+func (embyProvider) UsersPaths() []string {
+	return []string{"/Users/Query", "/Users"}
 }
 
 func (embyProvider) ItemURL(publicURL, itemID string) string {

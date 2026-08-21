@@ -127,7 +127,7 @@ func (c *Client) AdminSummary(ctx context.Context) (AdminSummary, error) {
 	wg.Add(4)
 	go func() {
 		defer wg.Done()
-		recordWarning("Users", c.getJSON(ctx, c.provider.UsersPath(), c.apiKey, &users))
+		recordWarning("Users", c.getJSONWithFallback(ctx, c.provider.UsersPaths(), c.apiKey, &users))
 	}()
 	go func() {
 		defer wg.Done()
@@ -135,7 +135,7 @@ func (c *Client) AdminSummary(ctx context.Context) (AdminSummary, error) {
 	}()
 	go func() {
 		defer wg.Done()
-		recordWarning("Libraries", c.getJSON(ctx, c.provider.VirtualFoldersPath(), c.apiKey, &libs))
+		recordWarning("Libraries", c.getJSONWithFallback(ctx, c.provider.VirtualFoldersPaths(), c.apiKey, &libs))
 	}()
 	go func() {
 		defer wg.Done()
@@ -184,4 +184,20 @@ func (c *Client) getJSON(ctx context.Context, path, token string, out any) error
 		return integrations.NewHTTPStatusError(c.Name(), path, resp.StatusCode)
 	}
 	return decodeMediaServerJSON(resp.Body, out)
+}
+
+func (c *Client) getJSONWithFallback(ctx context.Context, paths []string, token string, out any) error {
+	if len(paths) == 0 {
+		return fmt.Errorf("%s endpoint is not configured", c.Name())
+	}
+	for i, path := range paths {
+		err := c.getJSON(ctx, path, token, out)
+		if err == nil {
+			return nil
+		}
+		if i == len(paths)-1 || !integrations.IsHTTPStatus(err, http.StatusNotFound) {
+			return err
+		}
+	}
+	return nil
 }
