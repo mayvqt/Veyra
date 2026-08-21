@@ -17,6 +17,7 @@ func TestDeleteExpiredSessions(t *testing.T) {
 	now := time.Now().UTC()
 	for _, session := range []SessionRow{
 		{IDHash: "expired", UserID: user.ID, ExpiresAt: now.Add(-time.Minute), CreatedAt: now.Add(-time.Hour), LastSeenAt: now.Add(-time.Hour), AbsoluteExpiresAt: now.Add(time.Hour)},
+		{IDHash: "expires-now", UserID: user.ID, ExpiresAt: now, CreatedAt: now.Add(-time.Hour), LastSeenAt: now.Add(-time.Hour), AbsoluteExpiresAt: now.Add(time.Hour)},
 		{IDHash: "absolute-expired", UserID: user.ID, ExpiresAt: now.Add(time.Hour), CreatedAt: now.Add(-time.Hour), LastSeenAt: now.Add(-time.Hour), AbsoluteExpiresAt: now.Add(-time.Minute)},
 		{IDHash: "active", UserID: user.ID, ExpiresAt: now.Add(time.Hour), CreatedAt: now, LastSeenAt: now, AbsoluteExpiresAt: now.Add(time.Hour)},
 	} {
@@ -28,8 +29,8 @@ func TestDeleteExpiredSessions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if deleted != 2 {
-		t.Fatalf("deleted sessions = %d, want 2", deleted)
+	if deleted != 3 {
+		t.Fatalf("deleted sessions = %d, want 3", deleted)
 	}
 	if _, err := GetSession(ctx, db, "active"); err != nil {
 		t.Fatalf("active session was removed: %v", err)

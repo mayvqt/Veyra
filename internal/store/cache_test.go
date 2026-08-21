@@ -61,13 +61,17 @@ func TestDeleteExpiredCache(t *testing.T) {
 	if err := UpsertCache(context.Background(), db, "expired", `{"v":2}`, -time.Hour); err != nil {
 		t.Fatal(err)
 	}
+	now := time.Now().UTC()
+	if _, err := db.ExecContext(context.Background(), `INSERT INTO cache_entries (key, value_json, expires_at, created_at) VALUES (?, ?, ?, ?)`, "expires-now", `{"v":3}`, now, now); err != nil {
+		t.Fatal(err)
+	}
 
-	n, err := DeleteExpiredCache(context.Background(), db, time.Now().UTC())
+	n, err := DeleteExpiredCache(context.Background(), db, now)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if n != 1 {
-		t.Fatalf("expected to delete 1 expired row, deleted %d", n)
+	if n != 2 {
+		t.Fatalf("expected to delete 2 expired rows, deleted %d", n)
 	}
 
 	var remaining int

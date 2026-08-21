@@ -45,7 +45,7 @@ FROM sessions WHERE id_hash = ?
 		s.AdminCheckedAt = adminChecked.Time
 	}
 	now := time.Now().UTC()
-	if s.ExpiresAt.Before(now) || (!s.AbsoluteExpiresAt.IsZero() && s.AbsoluteExpiresAt.Before(now)) {
+	if !s.ExpiresAt.After(now) || (!s.AbsoluteExpiresAt.IsZero() && !s.AbsoluteExpiresAt.After(now)) {
 		return SessionRow{}, sql.ErrNoRows
 	}
 	return s, nil

@@ -34,20 +34,20 @@ func GetCache(ctx context.Context, db *sql.DB, key string) (string, bool, error)
 	if err != nil {
 		return "", false, err
 	}
-	if time.Now().UTC().After(exp) {
+	if !exp.After(time.Now().UTC()) {
 		return "", false, nil
 	}
 	return value, true, nil
 }
 
 func DeleteExpiredCache(ctx context.Context, db *sql.DB, now time.Time) (int64, error) {
-	res, err := db.ExecContext(ctx, `DELETE FROM cache_entries WHERE expires_at < ?`, now.UTC())
+	res, err := db.ExecContext(ctx, `DELETE FROM cache_entries WHERE expires_at <= ?`, now.UTC())
 	if err != nil {
 		return 0, err
 	}
 	n, err := res.RowsAffected()
 	if err != nil {
-		return 0, nil
+		return 0, err
 	}
 	return n, nil
 }
