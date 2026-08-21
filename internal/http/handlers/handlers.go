@@ -236,6 +236,7 @@ type ViewData struct {
 	DatabaseStatus            string
 	ConfigWarnings            []string
 	DashboardMessage          string
+	DashboardDataStale        bool
 	TotalUsers                int
 	AdminUsers                int
 	StandardUsers             int
@@ -256,6 +257,7 @@ const (
 	cacheTTLWidget            = 45 * time.Second
 	cacheTTLCalendar          = 2 * time.Minute
 	cacheTTLResolvedUser      = 10 * time.Minute
+	cacheMaxStaleWidget       = 15 * time.Minute
 )
 
 func (h *Handlers) render(w http.ResponseWriter, name string, data ViewData) {

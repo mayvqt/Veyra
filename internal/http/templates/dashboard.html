@@ -36,6 +36,9 @@
         <p>{{ .DashboardMessage }}</p>
       </section>
       {{ end }}
+      {{ if .DashboardDataStale }}
+      <p class="subtitle" role="status">Some dashboard data is temporarily cached.</p>
+      {{ end }}
 
       {{ if .SettingsShowRequestBot }}
       <section class="panel request-bot" data-seerr-request-bot>

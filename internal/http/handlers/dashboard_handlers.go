@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/mayvqt/veyra/internal/auth"
@@ -87,6 +88,7 @@ func (h *Handlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 		calendarNextURL    string
 		upcomingCalendar   []dashboard.CalendarItem
 		calendarWeekStart  time.Time
+		staleData          atomic.Bool
 	)
 
 	loaders := []func(){
@@ -100,9 +102,19 @@ func (h *Handlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 
 	if view.SettingsShowRecentMedia {
 		loaders = append(loaders, func() {
-			items, ok := h.fetchMediaRecentlyAddedWithAPIKey(r.Context(), u.MediaServerUserID)
-			if ok {
+			if !h.mediaserver.HasAPIKey() {
+				recentMediaUnavailable = true
+				return
+			}
+			cacheKey := "media:recent:" + strings.ToLower(strings.TrimSpace(u.MediaServerUserID))
+			items, stale, err := cacheLoadJSONWithStale(h, r.Context(), cacheKey, cacheTTLWidget, cacheMaxStaleWidget, func() ([]dashboard.MediaItem, error) {
+				return h.fetchMediaRecentlyAddedWithAPIKey(r.Context(), u.MediaServerUserID)
+			})
+			if err == nil {
 				recentlyAdded = items
+				if stale {
+					staleData.Store(true)
+				}
 			} else {
 				recentMediaUnavailable = true
 			}
@@ -112,10 +124,13 @@ func (h *Handlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 	if view.SettingsShowRecentReqs {
 		loaders = append(loaders, func() {
 			cacheKey := "requests:recent:v2:" + seerrUserCacheKey(seerrUser, u)
-			if reqs, err := cacheLoadJSON(h, r.Context(), cacheKey, cacheTTLWidget, func() ([]dashboard.RequestItem, error) {
+			if reqs, stale, err := cacheLoadJSONWithStale(h, r.Context(), cacheKey, cacheTTLWidget, cacheMaxStaleWidget, func() ([]dashboard.RequestItem, error) {
 				return h.seerr.RecentRequestsForUser(r.Context(), seerrUser, 5)
 			}); err == nil {
 				recentRequests = reqs
+				if stale {
+					staleData.Store(true)
+				}
 			}
 		})
 	}
@@ -123,7 +138,7 @@ func (h *Handlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 	if view.SettingsShowQuota {
 		loaders = append(loaders, func() {
 			cacheKey := "requests:quota:" + seerrUserCacheKey(seerrUser, u)
-			q, err := cacheLoadJSON(h, r.Context(), cacheKey, cacheTTLWidget, func() (seerr.Quota, error) {
+			q, stale, err := cacheLoadJSONWithStale(h, r.Context(), cacheKey, cacheTTLWidget, cacheMaxStaleWidget, func() (seerr.Quota, error) {
 				qq, err := h.seerr.UserQuotaForUser(r.Context(), seerrUser)
 				if err != nil {
 					return seerr.Quota{}, err
@@ -136,6 +151,9 @@ func (h *Handlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 			if err == nil {
 				quota = quotaViewValues(q)
 				quotaNote = ""
+				if stale {
+					staleData.Store(true)
+				}
 				return
 			}
 			if seerrUser.ID == 0 {
@@ -149,9 +167,13 @@ func (h *Handlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 	if view.SettingsShowQueue {
 		loaders = append(loaders, func() {
 			cacheKey := "downloads:queue"
-			downloadQueue, _ = cacheLoadJSON(h, r.Context(), cacheKey, cacheTTLHealth, func() ([]dashboard.QueueItem, error) {
+			var stale bool
+			downloadQueue, stale, _ = cacheLoadJSONWithStale(h, r.Context(), cacheKey, cacheTTLHealth, cacheMaxStaleWidget, func() ([]dashboard.QueueItem, error) {
 				return h.combinedDownloadQueue(r.Context(), 0)
 			})
+			if stale {
+				staleData.Store(true)
+			}
 		})
 	}
 
@@ -167,7 +189,11 @@ func (h *Handlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 		calendarWeekStart = weekStart
 
 		loaders = append(loaders, func() {
-			upcomingCalendar = h.loadUpcomingCalendarWeek(r.Context(), weekStart, weekEnd)
+			var stale bool
+			upcomingCalendar, stale = h.loadUpcomingCalendarWeek(r.Context(), weekStart, weekEnd)
+			if stale {
+				staleData.Store(true)
+			}
 		})
 	}
 
@@ -183,6 +209,7 @@ func (h *Handlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 		view.SeerrStatus,
 	)
 	view.RecentlyAdded = recentlyAdded
+	view.DashboardDataStale = staleData.Load()
 	view.RecentMediaUnavailable = recentMediaUnavailable
 	view.RecentRequests = recentRequests
 	view.QuotaValue = quota.Value
@@ -340,12 +367,12 @@ func collectProviderItems[T any](loads []providerLoad[T], onFailure func(string,
 	return out, nil
 }
 
-func (h *Handlers) loadUpcomingCalendarWeek(ctx context.Context, start, end time.Time) []dashboard.CalendarItem {
+func (h *Handlers) loadUpcomingCalendarWeek(ctx context.Context, start, end time.Time) ([]dashboard.CalendarItem, bool) {
 	cacheKey := "calendar:upcoming:" + start.Format("2006-01-02")
-	items, _ := cacheLoadJSON(h, ctx, cacheKey, cacheTTLCalendar, func() ([]dashboard.CalendarItem, error) {
+	items, stale, _ := cacheLoadJSONWithStale(h, ctx, cacheKey, cacheTTLCalendar, cacheMaxStaleWidget, func() ([]dashboard.CalendarItem, error) {
 		return h.combinedUpcomingCalendar(ctx, start, end, 0)
 	})
-	return items
+	return items, stale
 }
 
 func sortCalendarItems(items []dashboard.CalendarItem) {

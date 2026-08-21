@@ -53,6 +53,19 @@ func TestDashboardTemplateLabelsRequestPanel(t *testing.T) {
 	}
 }
 
+func TestDashboardTemplateDisclosesStaleData(t *testing.T) {
+	h, db := mkHandlers(t)
+	defer db.Close()
+	w := httptest.NewRecorder()
+	h.render(w, "dashboard.html", ViewData{AppName: "Veyra", DashboardDataStale: true})
+	if w.Code != http.StatusOK {
+		t.Fatalf("want 200 got %d", w.Code)
+	}
+	if !strings.Contains(w.Body.String(), "Some dashboard data is temporarily cached.") {
+		t.Fatal("expected stale data notice")
+	}
+}
+
 func TestDashboardTemplateRendersServicesPanelBelowRequestPanel(t *testing.T) {
 	h, db := mkHandlers(t)
 	defer db.Close()

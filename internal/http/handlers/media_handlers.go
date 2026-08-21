@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 
@@ -17,17 +18,17 @@ func limitMediaItems(items []dashboard.MediaItem, limit int) []dashboard.MediaIt
 	return items[:limit]
 }
 
-func (h *Handlers) fetchMediaRecentlyAddedWithAPIKey(ctx context.Context, mediaserverUserID string) ([]dashboard.MediaItem, bool) {
+func (h *Handlers) fetchMediaRecentlyAddedWithAPIKey(ctx context.Context, mediaserverUserID string) ([]dashboard.MediaItem, error) {
 	if !h.mediaserver.HasAPIKey() {
 		h.log.Warn("recently added fetch skipped: mediaserver api key missing", "user_id", mediaserverUserID)
-		return nil, false
+		return nil, fmt.Errorf("media server API key is missing")
 	}
 	items, err := h.mediaserver.RecentlyAdded(ctx, mediaserverUserID, "", dashboardRecentMediaLimit)
 	if err != nil {
 		h.log.Warn("recently added fetch failed", "user_id", mediaserverUserID, "mode", "api_key", "err", security.RedactErr(err))
-		return nil, false
+		return nil, err
 	}
-	return limitMediaItems(items, dashboardRecentMediaLimit), true
+	return limitMediaItems(items, dashboardRecentMediaLimit), nil
 }
 
 func (h *Handlers) MediaServerPoster(w http.ResponseWriter, r *http.Request) {

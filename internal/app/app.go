@@ -98,6 +98,7 @@ func newHTTPServer(addr string, handler http.Handler) *http.Server {
 
 func runMaintenance(ctx context.Context, log *slog.Logger, db *sql.DB) {
 	const cleanupInterval = 5 * time.Minute
+	const expiredCacheRetention = 30 * time.Minute
 	ticker := time.NewTicker(cleanupInterval)
 	defer ticker.Stop()
 	for {
@@ -112,7 +113,7 @@ func runMaintenance(ctx context.Context, log *slog.Logger, db *sql.DB) {
 			} else if sessions > 0 {
 				log.Debug("session cleanup removed expired entries", "count", sessions)
 			}
-			n, err := store.DeleteExpiredCache(ctx, db, now)
+			n, err := store.DeleteExpiredCache(ctx, db, now.Add(-expiredCacheRetention))
 			if err != nil {
 				log.Warn("cache cleanup failed", "err", err)
 			} else if n > 0 {

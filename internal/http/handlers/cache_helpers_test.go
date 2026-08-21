@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -74,6 +75,34 @@ func TestCacheLoadJSONCoalescesConcurrentMisses(t *testing.T) {
 		if result.A != 42 {
 			t.Fatalf("unexpected cached result: %+v", result)
 		}
+	}
+}
+
+func TestCacheLoadJSONUsesBoundedStaleValueOnFailure(t *testing.T) {
+	h, db := mkHandlers(t)
+	defer db.Close()
+	if err := cacheSetJSON(context.Background(), db, "stale", x{A: 7}, -time.Second); err != nil {
+		t.Fatal(err)
+	}
+	value, stale, err := cacheLoadJSONWithStale(h, context.Background(), "stale", time.Minute, 5*time.Minute, func() (x, error) {
+		return x{}, errors.New("upstream unavailable")
+	})
+	if err != nil || !stale || value.A != 7 {
+		t.Fatalf("value=%+v stale=%v err=%v", value, stale, err)
+	}
+}
+
+func TestCacheLoadJSONRejectsOverageStaleValue(t *testing.T) {
+	h, db := mkHandlers(t)
+	defer db.Close()
+	if err := cacheSetJSON(context.Background(), db, "too-old", x{A: 7}, -time.Hour); err != nil {
+		t.Fatal(err)
+	}
+	_, stale, err := cacheLoadJSONWithStale(h, context.Background(), "too-old", time.Minute, 5*time.Minute, func() (x, error) {
+		return x{}, errors.New("upstream unavailable")
+	})
+	if err == nil || stale {
+		t.Fatalf("stale=%v err=%v; want loader failure", stale, err)
 	}
 }
 
