@@ -39,6 +39,28 @@ type userSummary struct {
 	Name string `json:"Name"`
 }
 
+type userPayload struct {
+	Items []userSummary
+}
+
+func (p *userPayload) UnmarshalJSON(data []byte) error {
+	data = bytes.TrimSpace(data)
+	if len(data) == 0 {
+		return nil
+	}
+	if data[0] != '[' {
+		var wrapped struct {
+			Items []userSummary `json:"Items"`
+		}
+		if err := json.Unmarshal(data, &wrapped); err != nil {
+			return err
+		}
+		p.Items = wrapped.Items
+		return nil
+	}
+	return json.Unmarshal(data, &p.Items)
+}
+
 type libraryPayload struct {
 	Items []struct {
 		Name string `json:"Name"`
@@ -103,7 +125,7 @@ func (c *Client) AdminSummary(ctx context.Context) (AdminSummary, error) {
 		return out, nil
 	}
 	var (
-		users    []userSummary
+		users    userPayload
 		counts   itemCounts
 		libs     libraryPayload
 		sessions []sessionPayload
@@ -122,7 +144,7 @@ func (c *Client) AdminSummary(ctx context.Context) (AdminSummary, error) {
 	wg.Add(4)
 	go func() {
 		defer wg.Done()
-		recordWarning("Users", c.getJSON(ctx, "/Users", c.apiKey, &users))
+		recordWarning("Users", c.getJSON(ctx, c.provider.UsersPath(), c.apiKey, &users))
 	}()
 	go func() {
 		defer wg.Done()
@@ -137,7 +159,7 @@ func (c *Client) AdminSummary(ctx context.Context) (AdminSummary, error) {
 		recordWarning("Sessions", c.getJSON(ctx, "/Sessions", c.apiKey, &sessions))
 	}()
 	wg.Wait()
-	out.UserCount = len(users)
+	out.UserCount = len(users.Items)
 	out.MovieCount = counts.MovieCount
 	out.SeriesCount = counts.SeriesCount
 	out.EpisodeCount = counts.EpisodeCount

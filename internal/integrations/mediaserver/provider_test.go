@@ -74,6 +74,18 @@ func TestProviderVirtualFolderRoutesAreProviderSpecific(t *testing.T) {
 	}
 }
 
+func TestProviderUserRoutesAreProviderSpecific(t *testing.T) {
+	jellyfin, _ := newProvider(config.MediaServerJellyfin)
+	emby, _ := newProvider(config.MediaServerEmby)
+
+	if got := jellyfin.UsersPath(); got != "/Users" {
+		t.Fatalf("unexpected Jellyfin users path %q", got)
+	}
+	if got := emby.UsersPath(); got != "/Users/Query" {
+		t.Fatalf("unexpected Emby users path %q", got)
+	}
+}
+
 func TestProviderTokenAuthorizationIsShared(t *testing.T) {
 	for _, serverType := range []config.MediaServerType{config.MediaServerJellyfin, config.MediaServerEmby} {
 		provider, err := newProvider(serverType)

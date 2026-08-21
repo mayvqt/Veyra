@@ -36,6 +36,10 @@ func (embyProvider) VirtualFoldersPath() string {
 	return "/Library/VirtualFolders/Query"
 }
 
+func (embyProvider) UsersPath() string {
+	return "/Users/Query"
+}
+
 func (embyProvider) ItemURL(publicURL, itemID string) string {
 	return publicURL + "/web/index.html#!/item?id=" + url.QueryEscape(itemID)
 }

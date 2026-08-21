@@ -12,6 +12,7 @@ type provider interface {
 	AuthorizeLogin(*http.Request)
 	Authorize(*http.Request, string)
 	LatestItemsPath(userID, itemTypes string, limit int) string
+	UsersPath() string
 	VirtualFoldersPath() string
 	ItemURL(publicURL, itemID string) string
 }

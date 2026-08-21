@@ -317,8 +317,10 @@ func TestEmbyAdminSummaryUsesVirtualFoldersQuery(t *testing.T) {
 		switch r.URL.Path {
 		case "/System/Info/Public":
 			return response(http.StatusOK, `{"ServerName":"Emby"}`), nil
-		case "/Users", "/Sessions":
+		case "/Sessions":
 			return response(http.StatusOK, `[]`), nil
+		case "/Users/Query":
+			return response(http.StatusOK, `{"Items":[{"Id":"one","Name":"One"},{"Id":"two","Name":"Two"}],"TotalRecordCount":2}`), nil
 		case "/Items/Counts":
 			return response(http.StatusOK, `{}`), nil
 		case "/Library/VirtualFolders/Query":
@@ -332,8 +334,8 @@ func TestEmbyAdminSummaryUsesVirtualFoldersQuery(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if summary.LibraryCount != 2 {
-		t.Fatalf("expected two Emby libraries, got %+v", summary)
+	if summary.LibraryCount != 2 || summary.UserCount != 2 {
+		t.Fatalf("expected two Emby libraries and users, got %+v", summary)
 	}
 	if strings.Contains(strings.Join(summary.Warnings, "\n"), "Libraries unavailable") {
 		t.Fatalf("expected no Emby library warning, got %+v", summary.Warnings)

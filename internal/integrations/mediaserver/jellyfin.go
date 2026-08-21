@@ -37,6 +37,10 @@ func (jellyfinProvider) VirtualFoldersPath() string {
 	return "/Library/VirtualFolders"
 }
 
+func (jellyfinProvider) UsersPath() string {
+	return "/Users"
+}
+
 func (jellyfinProvider) ItemURL(publicURL, itemID string) string {
 	return publicURL + "/web/#/details?id=" + url.QueryEscape(itemID)
 }
