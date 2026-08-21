@@ -249,7 +249,7 @@ func TestAdminSummaryCollectsServerStats(t *testing.T) {
 	c := newTestClient(t, config.MediaServerJellyfin, "http://mediaserver.local", "https://jf.example", "server-key")
 	c.http = &http.Client{Transport: testutil.RoundTripFunc(func(r *http.Request) (*http.Response, error) {
 		switch r.URL.Path {
-		case "/System/Info/Public":
+		case "/System/Info":
 			return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(`{"ServerName":"Library","Version":"10.9.0","OperatingSystem":"Linux"}`)), Header: make(http.Header)}, nil
 		case "/Users":
 			if got := r.Header.Get("X-Emby-Token"); got != "server-key" {
@@ -282,11 +282,32 @@ func TestAdminSummaryCollectsServerStats(t *testing.T) {
 	}
 }
 
+func TestAdminSummaryUsesPublicSystemInfoWithoutAPIKey(t *testing.T) {
+	c := newTestClient(t, config.MediaServerEmby, "http://emby.local", "https://emby.example", "")
+	c.http = &http.Client{Transport: testutil.RoundTripFunc(func(r *http.Request) (*http.Response, error) {
+		if r.URL.Path != "/System/Info/Public" {
+			t.Fatalf("unexpected unauthenticated admin summary path %q", r.URL.Path)
+		}
+		if got := r.Header.Get("X-Emby-Token"); got != "" {
+			t.Fatalf("unexpected token on public system info request %q", got)
+		}
+		return response(http.StatusOK, `{"ServerName":"Emby","Version":"4.9.0"}`), nil
+	})}
+
+	summary, err := c.AdminSummary(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if summary.ServerName != "Emby" || summary.Version != "4.9.0" {
+		t.Fatalf("unexpected public system summary: %+v", summary)
+	}
+}
+
 func TestAdminSummaryAcceptsArrayLibraryPayload(t *testing.T) {
 	c := newTestClient(t, config.MediaServerJellyfin, "http://mediaserver.local", "https://jf.example", "server-key")
 	c.http = &http.Client{Transport: testutil.RoundTripFunc(func(r *http.Request) (*http.Response, error) {
 		switch r.URL.Path {
-		case "/System/Info/Public":
+		case "/System/Info":
 			return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(`{"ServerName":"Library","Version":"10.9.0"}`)), Header: make(http.Header)}, nil
 		case "/Users", "/Sessions":
 			return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(`[]`)), Header: make(http.Header)}, nil
@@ -315,8 +336,11 @@ func TestEmbyAdminSummaryUsesVirtualFoldersQuery(t *testing.T) {
 	c := newTestClient(t, config.MediaServerEmby, "http://emby.local", "https://emby.example", "server-key")
 	c.http = &http.Client{Transport: testutil.RoundTripFunc(func(r *http.Request) (*http.Response, error) {
 		switch r.URL.Path {
-		case "/System/Info/Public":
-			return response(http.StatusOK, `{"ServerName":"Emby"}`), nil
+		case "/System/Info":
+			if got := r.Header.Get("X-Emby-Token"); got != "server-key" {
+				t.Fatalf("expected system info request to use API key, got %q", got)
+			}
+			return response(http.StatusOK, `{"ServerName":"Emby","OperatingSystem":"Linux"}`), nil
 		case "/Sessions":
 			return response(http.StatusOK, `[]`), nil
 		case "/Users/Query":
@@ -334,7 +358,7 @@ func TestEmbyAdminSummaryUsesVirtualFoldersQuery(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if summary.LibraryCount != 2 || summary.UserCount != 2 {
+	if summary.LibraryCount != 2 || summary.UserCount != 2 || summary.OperatingSystem != "Linux" {
 		t.Fatalf("expected two Emby libraries and users, got %+v", summary)
 	}
 	if strings.Contains(strings.Join(summary.Warnings, "\n"), "Libraries unavailable") {
@@ -348,7 +372,7 @@ func TestAdminSummaryFetchesIndependentDetailsConcurrently(t *testing.T) {
 	release := make(chan struct{})
 	c.http = &http.Client{Transport: testutil.RoundTripFunc(func(r *http.Request) (*http.Response, error) {
 		switch r.URL.Path {
-		case "/System/Info/Public":
+		case "/System/Info":
 			return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(`{"ServerName":"Library","Version":"10.9.0","OperatingSystem":"Linux"}`)), Header: make(http.Header)}, nil
 		case "/Users":
 			started <- r.URL.Path
@@ -396,7 +420,7 @@ func TestAdminSummaryKeepsPartialStatsWarnings(t *testing.T) {
 	c := newTestClient(t, config.MediaServerJellyfin, "http://mediaserver.local", "https://jf.example", "server-key")
 	c.http = &http.Client{Transport: testutil.RoundTripFunc(func(r *http.Request) (*http.Response, error) {
 		switch r.URL.Path {
-		case "/System/Info/Public":
+		case "/System/Info":
 			return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(`{"ServerName":"Library","Version":"10.9.0"}`)), Header: make(http.Header)}, nil
 		case "/Users":
 			return &http.Response{StatusCode: 403, Body: io.NopCloser(strings.NewReader(`forbidden`)), Header: make(http.Header)}, nil

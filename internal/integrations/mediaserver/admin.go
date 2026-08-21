@@ -116,8 +116,12 @@ func (c *Client) AdminSummary(ctx context.Context) (AdminSummary, error) {
 	if c.baseURL == "" {
 		return AdminSummary{}, fmt.Errorf("%s is not configured", c.Name())
 	}
+	infoPath := "/System/Info/Public"
+	if c.apiKey != "" {
+		infoPath = "/System/Info"
+	}
 	var info systemInfo
-	if err := c.getJSON(ctx, "/System/Info/Public", "", &info); err != nil {
+	if err := c.getJSON(ctx, infoPath, c.apiKey, &info); err != nil {
 		return AdminSummary{}, err
 	}
 	out := AdminSummary{ServerName: info.ServerName, Version: info.Version, OperatingSystem: info.OperatingSystem}
