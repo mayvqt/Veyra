@@ -2,7 +2,6 @@ package mediaserver
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"mime"
@@ -290,5 +289,5 @@ func (c *Client) newRequest(ctx context.Context, method, path, token string, bod
 }
 
 func decodeMediaServerJSON(body io.Reader, out any) error {
-	return json.NewDecoder(io.LimitReader(body, mediaServerJSONLimit)).Decode(out)
+	return integrations.DecodeJSON(body, out, mediaServerJSONLimit)
 }

@@ -2,7 +2,6 @@ package arr
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"math"
@@ -448,7 +447,7 @@ func (c *Client) newRequest(ctx context.Context, method, path string, body io.Re
 }
 
 func decodeArrJSON(body io.Reader, out any) error {
-	return json.NewDecoder(io.LimitReader(body, arrJSONLimit)).Decode(out)
+	return integrations.DecodeJSON(body, out, arrJSONLimit)
 }
 
 func (c *Client) httpClient() *http.Client {

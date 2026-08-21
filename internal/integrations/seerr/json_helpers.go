@@ -1,11 +1,12 @@
 package seerr
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/mayvqt/veyra/internal/integrations"
 )
 
 const seerrJSONLimit = 4 << 20
@@ -96,5 +97,5 @@ func decodeSeerrJSON(resp *http.Response, out any) error {
 }
 
 func decodeLimitedSeerrJSON(body io.Reader, out any) error {
-	return json.NewDecoder(io.LimitReader(body, seerrJSONLimit)).Decode(out)
+	return integrations.DecodeJSON(body, out, seerrJSONLimit)
 }
