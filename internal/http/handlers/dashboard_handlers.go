@@ -229,15 +229,32 @@ func (h *Handlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 }
 
 func runConcurrently(tasks ...func()) {
-	var wg sync.WaitGroup
+	var (
+		wg         sync.WaitGroup
+		mu         sync.Mutex
+		panicValue any
+	)
 	wg.Add(len(tasks))
 	for _, task := range tasks {
+		task := task
 		go func() {
 			defer wg.Done()
+			defer func() {
+				if recovered := recover(); recovered != nil {
+					mu.Lock()
+					if panicValue == nil {
+						panicValue = recovered
+					}
+					mu.Unlock()
+				}
+			}()
 			task()
 		}()
 	}
 	wg.Wait()
+	if panicValue != nil {
+		panic(panicValue)
+	}
 }
 
 func (h *Handlers) combinedDownloadQueue(ctx context.Context, limit int) ([]dashboard.QueueItem, error) {
@@ -346,18 +363,31 @@ func collectProviderItems[T any](loads []providerLoad[T], onFailure func(string,
 		provider := provider
 		go func() {
 			defer wg.Done()
+			defer func() {
+				if recovered := recover(); recovered != nil {
+					err := fmt.Errorf("provider %s panicked: %v", provider.name, recovered)
+					mu.Lock()
+					failures = append(failures, err)
+					mu.Unlock()
+					if onFailure != nil {
+						onFailure(provider.name, err)
+					}
+				}
+			}()
 			items, err := provider.load()
-			mu.Lock()
-			defer mu.Unlock()
 			if err != nil {
+				mu.Lock()
 				failures = append(failures, err)
+				mu.Unlock()
 				if onFailure != nil {
 					onFailure(provider.name, err)
 				}
 				return
 			}
+			mu.Lock()
 			succeeded++
 			out = append(out, items...)
+			mu.Unlock()
 		}()
 	}
 	wg.Wait()

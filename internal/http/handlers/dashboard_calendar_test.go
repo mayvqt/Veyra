@@ -158,6 +158,24 @@ func TestArrCombinersKeepPartialResults(t *testing.T) {
 	}
 }
 
+func TestRunConcurrentlyPropagatesWorkerPanic(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Fatal("expected worker panic to be propagated")
+		}
+	}()
+	runConcurrently(func() { panic("boom") })
+}
+
+func TestCollectProviderItemsContainsProviderPanic(t *testing.T) {
+	items, err := collectProviderItems([]providerLoad[int]{{name: "broken", load: func() ([]int, error) {
+		panic("boom")
+	}}}, nil)
+	if err == nil || items != nil {
+		t.Fatalf("items=%v err=%v; want contained provider failure", items, err)
+	}
+}
+
 type successfulArrClient struct{ name string }
 
 func (c successfulArrClient) Name() string { return c.name }
