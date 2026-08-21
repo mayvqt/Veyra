@@ -40,15 +40,32 @@ func TestResolveSessionFailsClosedWhenAdminRefreshFails(t *testing.T) {
 	if checker.calls != 1 {
 		t.Fatalf("admin checker calls = %d, want 1", checker.calls)
 	}
+	storedRow, err := store.GetUserByID(context.Background(), db, urow.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !storedRow.IsAdmin {
+		t.Fatal("transient refresh failure permanently demoted the stored administrator")
+	}
 	_, storedUser, err := svc.ResolveSession(context.Background(), raw)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if storedUser.IsAdmin {
-		t.Fatal("fail-closed administrator state was not persisted")
+		t.Fatal("administrator access was not denied during retry backoff")
 	}
 	if checker.calls != 1 {
 		t.Fatalf("admin checker calls = %d, want throttled at 1", checker.calls)
+	}
+	checker.err = nil
+	checker.isAdmin = true
+	svc.setAdminRetry(idHash, time.Now().Add(-time.Second))
+	_, recoveredUser, err := svc.ResolveSession(context.Background(), raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !recoveredUser.IsAdmin || checker.calls != 2 {
+		t.Fatalf("administrator verification did not recover: user=%+v calls=%d", recoveredUser, checker.calls)
 	}
 }
 

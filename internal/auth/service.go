@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/mayvqt/veyra/internal/security"
@@ -17,6 +18,7 @@ const (
 	RememberSessionDuration = 7 * 24 * time.Hour
 	sessionTouchInterval    = 90 * time.Second
 	adminCheckInterval      = 15 * time.Minute
+	adminRetryInterval      = 30 * time.Second
 )
 
 type AdminStatusChecker interface {
@@ -29,6 +31,8 @@ type Service struct {
 	sessionSecret string
 	adminChecker  AdminStatusChecker
 	log           *slog.Logger
+	adminRetryMu  sync.Mutex
+	adminRetryAt  map[string]time.Time
 }
 
 func (s *Service) WithLogger(log *slog.Logger) *Service {
@@ -37,7 +41,7 @@ func (s *Service) WithLogger(log *slog.Logger) *Service {
 }
 
 func NewService(db *sql.DB, crypto *security.Crypto, sessionSecret string, adminChecker AdminStatusChecker) *Service {
-	return &Service{db: db, crypto: crypto, sessionSecret: sessionSecret, adminChecker: adminChecker}
+	return &Service{db: db, crypto: crypto, sessionSecret: sessionSecret, adminChecker: adminChecker, adminRetryAt: make(map[string]time.Time)}
 }
 
 func (s *Service) CreateSession(ctx context.Context, user User, mediaserverToken string, r *http.Request) (string, error) {
@@ -83,12 +87,16 @@ func (s *Service) ResolveSession(ctx context.Context, rawID string) (Session, Us
 	usr := User{ID: usrRow.ID, MediaServerUserID: usrRow.MediaServerUserID, Username: usrRow.Username, DisplayName: usrRow.DisplayName, IsAdmin: usrRow.IsAdmin}
 
 	if s.adminChecker != nil && adminCheckDue(sess.AdminCheckedAt, now) {
+		if s.adminRetryBlocked(sess.IDHash, now) {
+			usr.IsAdmin = false
+			return sess, usr, nil
+		}
 		token, decErr := s.crypto.Decrypt(sess.MediaServerAccessTokenEncrypted)
-		adminVerified := false
+		var checkErr error
 		if decErr == nil && token != "" {
-			isAdmin, checkErr := s.adminChecker.FetchUserAdminStatus(ctx, usr.MediaServerUserID, token)
+			var isAdmin bool
+			isAdmin, checkErr = s.adminChecker.FetchUserAdminStatus(ctx, usr.MediaServerUserID, token)
 			if checkErr == nil {
-				adminVerified = true
 				if isAdmin != usr.IsAdmin {
 					meta := "admin_changed"
 					s.warnPersistence("audit permission change", store.InsertAuditLog(ctx, s.db, &usr.ID, "permission.change_detected", usr.MediaServerUserID, meta, sess.IPAddress))
@@ -97,20 +105,23 @@ func (s *Service) ResolveSession(ctx context.Context, rawID string) (Session, Us
 				if err := store.UpdateUserAdmin(ctx, s.db, usr.ID, isAdmin); err != nil {
 					return Session{}, User{}, fmt.Errorf("persist administrator status: %w", err)
 				}
+				s.clearAdminRetry(sess.IDHash)
+				s.warnPersistence("record admin check", store.UpdateSessionAdminCheckedAt(ctx, s.db, sess.IDHash, time.Now().UTC()))
+				return sess, usr, nil
 			}
+		} else if decErr != nil {
+			checkErr = decErr
+		} else {
+			checkErr = fmt.Errorf("media server token is empty")
 		}
-		// Cached administrator status must not remain authoritative when the
-		// upstream permission check cannot be completed. Persist the safe state
-		// so subsequent requests and other sessions cannot reuse stale access.
-		if !adminVerified {
-			if usr.IsAdmin {
-				usr.IsAdmin = false
-				if err := store.UpdateUserAdmin(ctx, s.db, usr.ID, false); err != nil {
-					return Session{}, User{}, fmt.Errorf("persist safe administrator status: %w", err)
-				}
-			}
+		// Deny this session without turning a temporary upstream failure into a
+		// durable permission change. A confirmed non-admin response is persisted
+		// through the successful branch above.
+		usr.IsAdmin = false
+		s.setAdminRetry(sess.IDHash, now.Add(adminRetryInterval))
+		if s.log != nil {
+			s.log.Warn("administrator verification failed", "err", checkErr)
 		}
-		s.warnPersistence("record admin check", store.UpdateSessionAdminCheckedAt(ctx, s.db, sess.IDHash, time.Now().UTC()))
 	}
 
 	return sess, usr, nil
@@ -131,5 +142,33 @@ func (s *Service) DecryptSessionToken(enc string) (string, error) {
 }
 
 func (s *Service) DestroySession(ctx context.Context, rawID string) error {
-	return store.DeleteSession(ctx, s.db, security.HashSessionID(s.sessionSecret, rawID))
+	idHash := security.HashSessionID(s.sessionSecret, rawID)
+	s.clearAdminRetry(idHash)
+	return store.DeleteSession(ctx, s.db, idHash)
+}
+
+func (s *Service) adminRetryBlocked(idHash string, now time.Time) bool {
+	s.adminRetryMu.Lock()
+	defer s.adminRetryMu.Unlock()
+	retryAt, ok := s.adminRetryAt[idHash]
+	if !ok {
+		return false
+	}
+	if now.Before(retryAt) {
+		return true
+	}
+	delete(s.adminRetryAt, idHash)
+	return false
+}
+
+func (s *Service) setAdminRetry(idHash string, retryAt time.Time) {
+	s.adminRetryMu.Lock()
+	s.adminRetryAt[idHash] = retryAt
+	s.adminRetryMu.Unlock()
+}
+
+func (s *Service) clearAdminRetry(idHash string) {
+	s.adminRetryMu.Lock()
+	delete(s.adminRetryAt, idHash)
+	s.adminRetryMu.Unlock()
 }
