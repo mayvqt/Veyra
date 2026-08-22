@@ -10,15 +10,14 @@
   <main class="app-shell auth-shell login-shell">
     <section class="auth-card login-card">
       <div class="login-layout">
-        <div class="login-visual" aria-hidden="true">
-          <div class="login-brandmark">
-            <img src="/static/logo.png" alt="" class="login-logo">
-          </div>
+        <div class="login-brandmark">
+          <img src="/static/veyra-mark.svg" alt="" class="login-logo">
+          <span>{{ .AppName }}</span>
         </div>
 
         <div class="login-panel">
-          <p class="eyebrow">Media Portal</p>
-          <h1>{{ .AppName }}</h1>
+          <p class="eyebrow">Welcome back</p>
+          <h1>Sign in</h1>
           {{ if .Error }}<p class="error">{{ .Error }}</p>{{ end }}
 
           <form method="post" action="/login" class="form login-form">

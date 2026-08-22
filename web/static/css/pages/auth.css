@@ -13,7 +13,7 @@
 }
 
 .auth-shell {
-  width: min(1000px, 100%);
+  width: min(460px, 100%);
   margin: 0;
   padding: 1rem;
 }
@@ -30,32 +30,17 @@
 
 .login-layout {
   display: grid;
-  grid-template-columns: minmax(220px, max-content) minmax(320px, 1fr);
-  gap: 1.1rem;
-  align-items: stretch;
-  justify-content: center;
+  gap: 0;
 }
 
-.login-visual,
 .login-panel {
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--surface-deep);
-}
-
-.login-visual {
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
-  gap: var(--space-4);
-  place-items: center;
-  overflow: hidden;
-  padding: 1rem;
+  border-top: 1px solid var(--line);
 }
 
 .login-panel {
   display: grid;
   align-content: center;
-  padding: 1.35rem;
+  padding: 1.5rem 0.35rem 0.35rem;
   text-align: left;
 }
 
@@ -76,25 +61,19 @@
 }
 
 .login-brandmark {
-  width: fit-content;
-  max-width: 100%;
-  height: 100%;
-  margin: 0;
-  border: 0;
-  background: transparent;
-  box-shadow: none;
-  padding: 0.15rem;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.25rem 0.35rem 1.15rem;
+  color: var(--text);
+  font-size: 1.05rem;
+  font-weight: 800;
 }
 
 .login-logo {
   display: block;
-  width: auto;
-  height: 100%;
-  max-height: 100%;
-  max-width: min(340px, 100%);
-  object-fit: contain;
+  width: 2.4rem;
+  height: 2.4rem;
   filter: drop-shadow(0 18px 34px rgba(6, 12, 18, 0.55));
 }
 
@@ -178,30 +157,8 @@
     padding: 1rem;
   }
 
-  .login-layout {
-    grid-template-columns: 1fr;
-    gap: 0.75rem;
-  }
-
-  .login-visual {
-    min-height: 104px;
-    padding: 0.6rem;
-  }
-
   .login-panel {
-    padding: 1rem;
-    text-align: center;
-  }
-
-  .login-brandmark {
-    height: auto;
-    max-height: 84px;
-  }
-
-  .login-logo {
-    width: auto;
-    height: auto;
-    max-height: 76px;
-    max-width: min(240px, 100%);
+    padding: 1.25rem 0 0;
+    text-align: left;
   }
 }
