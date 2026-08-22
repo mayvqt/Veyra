@@ -66,7 +66,7 @@ func TestDashboardTemplateDisclosesStaleData(t *testing.T) {
 	}
 }
 
-func TestDashboardTemplateRendersServicesPanelBelowRequestPanel(t *testing.T) {
+func TestDashboardTemplateRendersServiceLinksInRail(t *testing.T) {
 	h, db := mkHandlers(t)
 	defer db.Close()
 
@@ -91,28 +91,28 @@ func TestDashboardTemplateRendersServicesPanelBelowRequestPanel(t *testing.T) {
 	body := w.Body.String()
 	for _, want := range []string{
 		`/static/app.css?v=test-version`,
-		`class="panel services-panel" aria-labelledby="media-services-title"`,
-		`id="media-services-title">Quick Links`,
+		`class="rail-links" aria-labelledby="media-services-title"`,
+		`id="media-services-title" class="rail-label">Quick Links`,
 		`aria-label="Jellyfin Online"`,
 		`aria-label="Seerr Offline"`,
-		`class="service-link" href="https://media.example.com" target="_blank" rel="noopener noreferrer"`,
-		`class="service-link" href="https://requests.example.com" target="_blank" rel="noopener noreferrer"`,
+		`class="rail-service-link" href="https://media.example.com" target="_blank" rel="noopener noreferrer"`,
+		`class="rail-service-link" href="https://requests.example.com" target="_blank" rel="noopener noreferrer"`,
 	} {
 		if !strings.Contains(body, want) {
-			t.Fatalf("expected dashboard services panel to contain %q", want)
+			t.Fatalf("expected dashboard service rail to contain %q", want)
 		}
 	}
 	for _, unwanted := range []string{"Stream your library", "Discover and request"} {
 		if strings.Contains(body, unwanted) {
-			t.Fatalf("expected services panel to omit redundant copy %q", unwanted)
+			t.Fatalf("expected service rail to omit redundant copy %q", unwanted)
 		}
 	}
-	if strings.Index(body, `class="panel services-panel"`) < strings.Index(body, `data-seerr-request-bot`) {
-		t.Fatal("expected services panel to render below request panel")
+	if strings.Index(body, `class="rail-links"`) > strings.Index(body, `data-seerr-request-bot`) {
+		t.Fatal("expected service links to render in the navigation rail")
 	}
 }
 
-func TestDashboardTemplateHidesServicesPanelWithoutServices(t *testing.T) {
+func TestDashboardTemplateHidesServiceLinksWithoutServices(t *testing.T) {
 	h, db := mkHandlers(t)
 	defer db.Close()
 
@@ -121,8 +121,8 @@ func TestDashboardTemplateHidesServicesPanelWithoutServices(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("want 200 got %d", w.Code)
 	}
-	if strings.Contains(w.Body.String(), `class="panel services-panel"`) {
-		t.Fatal("expected services panel to be hidden without configured services")
+	if strings.Contains(w.Body.String(), `class="rail-links"`) {
+		t.Fatal("expected service links to be hidden without configured services")
 	}
 }
 
@@ -233,30 +233,6 @@ func TestAdminSettingsTemplateUsesSharedPanelLayout(t *testing.T) {
 	for _, unwanted := range []string{`class="settings-nav"`, `class="settings-section-index"`} {
 		if strings.Contains(body, unwanted) {
 			t.Fatalf("expected settings template to reuse shared components instead of %q", unwanted)
-		}
-	}
-}
-
-func TestDashboardTemplateRendersHealthDots(t *testing.T) {
-	h, db := mkHandlers(t)
-	defer db.Close()
-
-	view := ViewData{
-		AppName:                "Veyra",
-		MediaServerStatus:      "Online",
-		SeerrStatus:            "Offline",
-		SettingsShowRequestBot: true,
-	}
-
-	w := httptest.NewRecorder()
-	h.render(w, "dashboard.html", view)
-	if w.Code != http.StatusOK {
-		t.Fatalf("want 200 got %d", w.Code)
-	}
-	body := w.Body.String()
-	for _, want := range []string{`class="status-dot bad" role="img" aria-label="Seerr Offline"`, `>Seerr Offline</span>`} {
-		if !strings.Contains(body, want) {
-			t.Fatalf("expected dashboard health dot markup to contain %q", want)
 		}
 	}
 }

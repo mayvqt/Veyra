@@ -6,28 +6,44 @@
   <title>{{ .AppName }} - Dashboard</title>
   <link rel="stylesheet" href="/static/app.css?v={{ .StaticVersion }}">
 </head>
-<body>
-  <main class="app-shell">
-    <div class="topbar">
-      <div class="brand">{{ .AppName }}</div>
+<body class="dashboard-page">
+  <main class="app-shell dashboard-shell">
+    <aside class="topbar dashboard-rail">
+      <div class="brand-lockup">
+        <div class="brand">{{ .AppName }}</div>
+        <span class="brand-caption">Media portal</span>
+      </div>
       <div class="topbar-right">
         <nav class="topnav">
           <a class="nav-link active" href="/dashboard">Dashboard</a>
           <a class="nav-link" href="/guide">Guide</a>
           {{ if .User.IsAdmin }}<a class="nav-link admin-nav-link" href="/admin">Admin</a>{{ end }}
         </nav>
+        {{ if .DashboardServices }}
+        <div class="rail-links" aria-labelledby="media-services-title">
+          <p id="media-services-title" class="rail-label">Quick Links</p>
+          {{ range .DashboardServices }}
+          <a class="rail-service-link" href="{{ .URL }}" target="_blank" rel="noopener noreferrer">
+            <span class="status-dot {{ if eq .Status "Online" }}ok{{ else }}bad{{ end }}" role="img" aria-label="{{ .Name }} {{ .Status }}"></span>
+            <span>{{ .Name }}</span>
+            <span aria-hidden="true">&nearr;</span>
+          </a>
+          {{ end }}
+        </div>
+        {{ end }}
         <form method="post" action="/logout" class="topbar-logout">
           <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
-          <button class="btn secondary" type="submit">Log out</button>
+          <button class="btn secondary" type="submit">Sign out</button>
         </form>
       </div>
-    </div>
+      <div class="rail-status"><span class="status-dot ok"></span><span>Services connected</span></div>
+    </aside>
 
     <section class="container" data-dashboard-container>
       <header class="section-head">
         <div>
-          <p class="eyebrow">Dashboard</p>
           <h1 class="page-title">Welcome back, <span class="role-tag {{ if .User.IsAdmin }}role-admin{{ else }}role-user{{ end }}">{{ .User.DisplayName }}</span>.</h1>
+          <p class="hero-subtitle">Everything in one place.</p>
         </div>
       </header>
       {{ if .DashboardMessage }}
@@ -45,9 +61,8 @@
         <div class="request-bot-head">
           <div>
             <h2>Request Media</h2>
-            <p class="subtitle">Search movies and shows on Seerr</p>
+            <p class="subtitle">Search for movies and shows.</p>
           </div>
-          <span class="status-inline service-health"><span class="status-dot {{ if eq .SeerrStatus "Online" }}ok{{ else }}bad{{ end }}" role="img" aria-label="Seerr {{ .SeerrStatus }}"></span><span>Seerr {{ .SeerrStatus }}</span></span>
         </div>
         <form class="request-bot-search" data-seerr-search-form>
           <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}" data-seerr-csrf>
@@ -62,68 +77,47 @@
       </section>
       {{ end }}
 
-      {{ if .DashboardServices }}
-      <section class="panel services-panel" aria-labelledby="media-services-title">
-        <div class="panel-title-row service-title-row">
+      {{ if .SettingsShowQuota }}
+      <section class="panel quota-panel">
+        <div class="panel-title-row quota-title-row">
           <div>
-            <h2 id="media-services-title">Quick Links</h2>
-            <p class="subtitle">Open your connected media services</p>
+            <h2>Request Quota</h2>
+            <p class="subtitle">Your remaining requests.</p>
           </div>
         </div>
-        <div class="service-link-grid">
-          {{ range .DashboardServices }}
-          <a class="service-link" href="{{ .URL }}" target="_blank" rel="noopener noreferrer">
-            <span class="service-link-name">
-              <span class="status-dot {{ if eq .Status "Online" }}ok{{ else }}bad{{ end }}" role="img" aria-label="{{ .Name }} {{ .Status }}" title="{{ .Name }} {{ .Status }}"></span>
-              <strong>{{ .Name }}</strong>
-            </span>
-            <span class="service-link-open">Open <span aria-hidden="true">&nearr;</span></span>
-          </a>
+        {{ if .QuotaMeters }}
+        <div class="quota-meter-grid">
+          {{ range .QuotaMeters }}
+          <article class="quota-meter quota-meter-{{ .Class }}">
+            <div class="quota-meter-head">
+              <div>
+                <strong>{{ .Label }}</strong>
+                {{ if .Detail }}<span class="meta-line">{{ .Detail }}</span>{{ end }}
+              </div>
+              <span class="pill quota-pill quota-{{ .Class }}">{{ .Value }}</span>
+            </div>
+            {{ if not .Unlimited }}
+            <div class="quota-meter-track" aria-label="{{ .Label }} request quota remaining">
+              <span style="width: {{ .Percent }}%"></span>
+            </div>
+            {{ end }}
+          </article>
           {{ end }}
         </div>
+        {{ else if .QuotaValue }}
+        <p class="quota-value">{{ .QuotaValue }}</p>
+        {{ else if .QuotaNote }}
+        <p class="subtitle">{{ .QuotaNote }}</p>
+        {{ end }}
       </section>
       {{ end }}
 
       <div class="grid dashboard-grid">
-        {{ if .SettingsShowQuota }}
-        <section class="panel quota-panel">
-          <div class="panel-title-row quota-title-row">
-            <div>
-              <h2>Request Quota</h2>
-              <p class="subtitle">Requests available to you</p>
-            </div>
-          </div>
-          {{ if .QuotaMeters }}
-          <div class="quota-meter-grid">
-            {{ range .QuotaMeters }}
-            <article class="quota-meter quota-meter-{{ .Class }}">
-              <div class="quota-meter-head">
-                <div>
-                  <strong>{{ .Label }}</strong>
-                  {{ if .Detail }}<span class="meta-line">{{ .Detail }}</span>{{ end }}
-                </div>
-                <span class="pill quota-pill quota-{{ .Class }}">{{ .Value }}</span>
-              </div>
-              {{ if not .Unlimited }}
-              <div class="quota-meter-track" aria-label="{{ .Label }} request quota remaining">
-                <span style="width: {{ .Percent }}%"></span>
-              </div>
-              {{ end }}
-            </article>
-            {{ end }}
-          </div>
-          {{ else if .QuotaValue }}
-          <p class="quota-value">{{ .QuotaValue }}</p>
-          {{ else if .QuotaNote }}
-          <p class="subtitle">{{ .QuotaNote }}</p>
-          {{ end }}
-        </section>
-        {{ end }}
 
         {{ if .SettingsShowCalendar }}
-        <section class="panel">
+        <section class="panel calendar-panel">
           <div class="panel-title-row">
-            <h2>Coming Up</h2>
+            <h2>Upcoming</h2>
             <div class="calendar-tools">
               <div class="calendar-legend" aria-label="Availability legend">
                 <span class="legend-item"><span class="legend-dot legend-available"></span>Available</span>
@@ -177,7 +171,7 @@
         {{ end }}
 
         {{ if .SettingsShowRecentMedia }}
-        <section class="panel">
+        <section class="panel recent-media-panel">
           <h2>Recently Added</h2>
           {{ if .RecentlyAdded }}
           <ul class="media-grid recently-added-grid" id="recently-added-list">
@@ -205,7 +199,7 @@
         {{ end }}
 
         {{ if .SettingsShowRecentReqs }}
-        <section class="panel">
+        <section class="panel recent-requests-panel">
           <div class="panel-title-row request-section-head">
             <h2>Recent Requests</h2>
             {{ if .RecentRequests }}<span class="pill request-count">{{ len .RecentRequests }}</span>{{ end }}
@@ -241,7 +235,7 @@
         {{ end }}
 
         {{ if .SettingsShowQueue }}
-        <section class="panel">
+        <section class="panel queue-panel">
           <div class="panel-title-row">
             <h2>Download Queue</h2>
             <div class="queue-filter" role="group" aria-label="Queue source filter">
