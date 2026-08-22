@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Veyra</title>
+  <defs>
+    <linearGradient id="v" x1="10" y1="8" x2="54" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f3c6d8"/>
+      <stop offset=".52" stop-color="#d7b8ee"/>
+      <stop offset="1" stop-color="#9b83df"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#v)" d="M8 12.5A4.5 4.5 0 0 1 12.5 8h9.2l10.6 30.2L42.8 8h8.7a4.5 4.5 0 0 1 4.2 6.1L38.3 53.3A6.8 6.8 0 0 1 32 57.5a6.8 6.8 0 0 1-6.3-4.2L8.3 14.1A4.5 4.5 0 0 1 8 12.5Z"/>
+  <path fill="#f7f3ff" fill-opacity=".9" d="m25.6 8 6.7 19.3L39 8h-4.8l-1.9 6.2L30.2 8h-4.6Z"/>
+</svg>
