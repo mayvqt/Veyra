@@ -386,10 +386,6 @@ textarea:focus {
 
 /* Shared compact layout */
 @media (max-width: 759px) {
-  body:not(.auth-page) {
-    padding-bottom: 4.75rem;
-  }
-
   .app-shell {
     width: min(100% - 1rem, 1320px);
     padding-top: 0.5rem;
@@ -402,24 +398,18 @@ textarea:focus {
   }
 
   body:not(.auth-page) .topnav {
-    position: fixed;
-    z-index: 30;
-    right: 0.75rem;
-    bottom: max(0.75rem, env(safe-area-inset-bottom));
-    left: 0.75rem;
     display: flex;
-    grid-row: auto;
+    grid-column: 1 / -1;
+    grid-row: 2;
     gap: 0.25rem;
-    width: auto;
-    max-width: 34rem;
-    margin-inline: auto;
+    width: 100%;
+    margin: 0;
     overflow-x: auto;
-    border: 1px solid var(--line-strong);
-    border-radius: 16px;
-    padding: 0.4rem;
-    background: rgba(25, 21, 34, 0.94);
-    box-shadow: 0 16px 40px rgba(4, 2, 9, 0.48);
-    backdrop-filter: blur(18px);
+    border: 0;
+    border-radius: 12px;
+    padding: 0.3rem;
+    background: rgba(255, 255, 255, 0.025);
+    box-shadow: none;
   }
 
   body:not(.auth-page) .nav-link {
@@ -454,7 +444,7 @@ textarea:focus {
     display: flex;
     gap: 0.25rem;
     grid-column: 1 / -1;
-    grid-row: 2;
+    grid-row: 3;
     width: 100%;
     margin: 0;
     overflow-x: auto;
