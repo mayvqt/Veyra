@@ -50,11 +50,12 @@ func NewRouter(cfg config.Config, log *slog.Logger, db *sql.DB) (http.Handler, e
 	r.Use(middleware.SecurityHeaders)
 
 	r.Get("/healthz", h.Health)
-	r.With(middleware.CacheStaticAssets).Get("/static/app.css", func(w http.ResponseWriter, _ *http.Request) {
+	staticCache := middleware.CacheStaticAssets(veyra.StaticVersion())
+	r.With(staticCache).Get("/static/app.css", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/css; charset=utf-8")
 		_, _ = io.WriteString(w, veyra.AppCSS())
 	})
-	r.With(middleware.CacheStaticAssets).Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.FS(veyra.StaticFS()))))
+	r.With(staticCache).Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.FS(veyra.StaticFS()))))
 	r.Get("/", h.Home)
 	r.Get("/setup", h.SetupGet)
 	r.Post("/setup", h.SetupPost)
