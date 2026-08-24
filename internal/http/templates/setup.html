@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ .AppName }} - Setup</title>
-  <link rel="stylesheet" href="/static/app.css?v={{ .StaticVersion }}">
+  {{ template "styles" . }}
 </head>
 <body class="auth-page setup-page">
   <main class="app-shell auth-shell">

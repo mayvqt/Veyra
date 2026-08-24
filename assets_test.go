@@ -1,6 +1,7 @@
 package veyra
 
 import (
+	"html/template"
 	"io/fs"
 	"strings"
 	"testing"
@@ -18,6 +19,12 @@ func TestRuntimeAssetsIncludeTemplatesAndStaticFiles(t *testing.T) {
 		if _, err := fs.Stat(test.assets, test.path); err != nil {
 			t.Fatalf("runtime asset %q missing: %v", test.path, err)
 		}
+	}
+}
+
+func TestTemplatesParseTogether(t *testing.T) {
+	if _, err := template.ParseFS(TemplateFS(), "*.html"); err != nil {
+		t.Fatal(err)
 	}
 }
 
