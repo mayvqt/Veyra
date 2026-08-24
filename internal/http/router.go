@@ -3,6 +3,7 @@ package http
 import (
 	"database/sql"
 	"html/template"
+	"io"
 	"log/slog"
 	"net/http"
 	"time"
@@ -51,7 +52,7 @@ func NewRouter(cfg config.Config, log *slog.Logger, db *sql.DB) (http.Handler, e
 	r.Get("/healthz", h.Health)
 	r.With(middleware.CacheStaticAssets).Get("/static/app.css", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/css; charset=utf-8")
-		_, _ = w.Write(veyra.AppCSS())
+		_, _ = io.WriteString(w, veyra.AppCSS())
 	})
 	r.With(middleware.CacheStaticAssets).Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.FS(veyra.StaticFS()))))
 	r.Get("/", h.Home)

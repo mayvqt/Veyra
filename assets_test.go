@@ -1,8 +1,8 @@
 package veyra
 
 import (
-	"bytes"
 	"io/fs"
+	"strings"
 	"testing"
 )
 
@@ -23,11 +23,11 @@ func TestRuntimeAssetsIncludeTemplatesAndStaticFiles(t *testing.T) {
 
 func TestAppCSSBundlesStylesWithoutImports(t *testing.T) {
 	css := AppCSS()
-	if bytes.Contains(css, []byte("@import")) {
+	if strings.Contains(css, "@import") {
 		t.Fatal("bundled stylesheet should not contain CSS imports")
 	}
-	for _, marker := range [][]byte{[]byte(":root"), []byte(".dashboard-page"), []byte(".auth-page")} {
-		if !bytes.Contains(css, marker) {
+	for _, marker := range []string{":root", ".dashboard-page", ".auth-page"} {
+		if !strings.Contains(css, marker) {
 			t.Fatalf("bundled stylesheet is missing %q", marker)
 		}
 	}

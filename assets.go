@@ -1,9 +1,9 @@
 package veyra
 
 import (
-	"bytes"
 	"embed"
 	"io/fs"
+	"strings"
 )
 
 // RuntimeAssets contains the templates and static files required by the web UI.
@@ -43,14 +43,14 @@ func StaticFS() fs.FS {
 	return static
 }
 
-// AppCSS returns the component stylesheets as one browser-ready response.
+// AppCSS returns the immutable component bundle as one browser-ready response.
 // The source files stay separate so they remain easy to navigate and edit.
-func AppCSS() []byte {
+func AppCSS() string {
 	return appCSS
 }
 
-func buildAppCSS() []byte {
-	var combined bytes.Buffer
+func buildAppCSS() string {
+	var combined strings.Builder
 	for _, path := range stylesheetPaths {
 		content, err := RuntimeAssets.ReadFile(path)
 		if err != nil {
@@ -59,5 +59,5 @@ func buildAppCSS() []byte {
 		combined.Write(content)
 		combined.WriteByte('\n')
 	}
-	return combined.Bytes()
+	return combined.String()
 }
