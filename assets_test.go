@@ -39,3 +39,11 @@ func TestAppCSSBundlesStylesWithoutImports(t *testing.T) {
 		}
 	}
 }
+
+func TestStaticVersionIsStableFingerprint(t *testing.T) {
+	first := StaticVersion()
+	second := StaticVersion()
+	if len(first) != 12 || first != second {
+		t.Fatalf("expected a stable static asset fingerprint, got %q and %q", first, second)
+	}
+}

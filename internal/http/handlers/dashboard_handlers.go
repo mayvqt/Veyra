@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/mayvqt/veyra/internal/auth"
-	"github.com/mayvqt/veyra/internal/buildinfo"
 	"github.com/mayvqt/veyra/internal/dashboard"
 	"github.com/mayvqt/veyra/internal/http/middleware"
 	"github.com/mayvqt/veyra/internal/integrations"
@@ -51,7 +50,6 @@ func (h *Handlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 		SettingsShowQueue:       readBoolSettingFromMap(settings, settingWidgetDownloadQueue, true),
 		SettingsShowCalendar:    readBoolSettingFromMap(settings, settingWidgetCalendar, true),
 		DashboardMessage:        strings.TrimSpace(readSettingFromMap(settings, settingDashboardMessage)),
-		StaticVersion:           buildinfo.Version,
 	}
 
 	if sess, ok := middleware.SessionFromContext(r.Context()); ok {

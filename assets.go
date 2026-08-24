@@ -1,7 +1,9 @@
 package veyra
 
 import (
+	"crypto/sha256"
 	"embed"
+	"encoding/hex"
 	"io/fs"
 	"strings"
 )
@@ -26,6 +28,7 @@ var stylesheetPaths = []string{
 }
 
 var appCSS = buildAppCSS()
+var staticVersion = buildStaticVersion()
 
 func TemplateFS() fs.FS {
 	templates, err := fs.Sub(RuntimeAssets, "internal/http/templates")
@@ -49,6 +52,11 @@ func AppCSS() string {
 	return appCSS
 }
 
+// StaticVersion fingerprints every embedded static asset for cache busting.
+func StaticVersion() string {
+	return staticVersion
+}
+
 func buildAppCSS() string {
 	var combined strings.Builder
 	for _, path := range stylesheetPaths {
@@ -60,4 +68,29 @@ func buildAppCSS() string {
 		combined.WriteByte('\n')
 	}
 	return combined.String()
+}
+
+func buildStaticVersion() string {
+	hash := sha256.New()
+	static := StaticFS()
+	err := fs.WalkDir(static, ".", func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		content, err := fs.ReadFile(static, path)
+		if err != nil {
+			return err
+		}
+		_, _ = hash.Write([]byte(path))
+		_, _ = hash.Write([]byte{0})
+		_, _ = hash.Write(content)
+		return nil
+	})
+	if err != nil {
+		panic(err)
+	}
+	return hex.EncodeToString(hash.Sum(nil)[:6])
 }
