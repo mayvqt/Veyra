@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/mayvqt/veyra/internal/auth"
+	"github.com/mayvqt/veyra/internal/buildinfo"
 	"github.com/mayvqt/veyra/internal/config"
 	"github.com/mayvqt/veyra/internal/dashboard"
 	"github.com/mayvqt/veyra/internal/integrations"
@@ -261,6 +262,9 @@ const (
 )
 
 func (h *Handlers) render(w http.ResponseWriter, name string, data ViewData) {
+	if data.StaticVersion == "" {
+		data.StaticVersion = buildinfo.Version
+	}
 	var buf bytes.Buffer
 	if err := h.tmpl.ExecuteTemplate(&buf, name, data); err != nil {
 		h.log.Error("template render failed", "template", name, "err", err)
