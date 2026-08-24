@@ -1,6 +1,7 @@
 package veyra
 
 import (
+	"bytes"
 	"embed"
 	"io/fs"
 )
@@ -9,6 +10,22 @@ import (
 //
 //go:embed internal/http/templates/*.html web/static
 var RuntimeAssets embed.FS
+
+var stylesheetPaths = []string{
+	"web/static/css/base/foundation.css",
+	"web/static/css/base/shell.css",
+	"web/static/css/components/data.css",
+	"web/static/css/components/badges.css",
+	"web/static/css/components/forms.css",
+	"web/static/css/components/actions.css",
+	"web/static/css/pages/settings.css",
+	"web/static/css/pages/dashboard.css",
+	"web/static/css/pages/auth.css",
+	"web/static/css/pages/admin.css",
+	"web/static/css/theme/veyra.css",
+}
+
+var appCSS = buildAppCSS()
 
 func TemplateFS() fs.FS {
 	templates, err := fs.Sub(RuntimeAssets, "internal/http/templates")
@@ -24,4 +41,23 @@ func StaticFS() fs.FS {
 		panic(err)
 	}
 	return static
+}
+
+// AppCSS returns the component stylesheets as one browser-ready response.
+// The source files stay separate so they remain easy to navigate and edit.
+func AppCSS() []byte {
+	return appCSS
+}
+
+func buildAppCSS() []byte {
+	var combined bytes.Buffer
+	for _, path := range stylesheetPaths {
+		content, err := RuntimeAssets.ReadFile(path)
+		if err != nil {
+			panic(err)
+		}
+		combined.Write(content)
+		combined.WriteByte('\n')
+	}
+	return combined.Bytes()
 }
