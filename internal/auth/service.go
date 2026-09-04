@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
-	"net/http"
 	"sync"
 	"time"
 
@@ -44,11 +43,11 @@ func NewService(db *sql.DB, crypto *security.Crypto, sessionSecret string, admin
 	return &Service{db: db, crypto: crypto, sessionSecret: sessionSecret, adminChecker: adminChecker, adminRetryAt: make(map[string]time.Time)}
 }
 
-func (s *Service) CreateSession(ctx context.Context, user User, mediaserverToken string, r *http.Request) (string, error) {
-	return s.CreateSessionWithDuration(ctx, user, mediaserverToken, r, DefaultSessionDuration)
+func (s *Service) CreateSession(ctx context.Context, user User, mediaserverToken, clientIP, userAgent string) (string, error) {
+	return s.CreateSessionWithDuration(ctx, user, mediaserverToken, clientIP, userAgent, DefaultSessionDuration)
 }
 
-func (s *Service) CreateSessionWithDuration(ctx context.Context, user User, mediaserverToken string, r *http.Request, duration time.Duration) (string, error) {
+func (s *Service) CreateSessionWithDuration(ctx context.Context, user User, mediaserverToken, clientIP, userAgent string, duration time.Duration) (string, error) {
 	rawID, err := security.NewSessionID()
 	if err != nil {
 		return "", err
@@ -62,7 +61,7 @@ func (s *Service) CreateSessionWithDuration(ctx context.Context, user User, medi
 	}
 	now := time.Now().UTC()
 	expiresAt := now.Add(duration)
-	row := store.SessionRow{IDHash: security.HashSessionID(s.sessionSecret, rawID), UserID: user.ID, MediaServerAccessTokenEncrypted: encryptedToken, ExpiresAt: expiresAt, CreatedAt: now, LastSeenAt: now, AbsoluteExpiresAt: expiresAt, AdminCheckedAt: now, IPAddress: r.RemoteAddr, UserAgent: r.UserAgent()}
+	row := store.SessionRow{IDHash: security.HashSessionID(s.sessionSecret, rawID), UserID: user.ID, MediaServerAccessTokenEncrypted: encryptedToken, ExpiresAt: expiresAt, CreatedAt: now, LastSeenAt: now, AbsoluteExpiresAt: expiresAt, AdminCheckedAt: now, IPAddress: clientIP, UserAgent: userAgent}
 	if err := store.InsertSession(ctx, s.db, row); err != nil {
 		return "", err
 	}

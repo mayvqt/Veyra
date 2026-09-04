@@ -51,6 +51,15 @@ func TestDashboardTemplateLabelsRequestPanel(t *testing.T) {
 	if !strings.Contains(body, `/static/dashboard.js?v=test-version`) {
 		t.Fatal("expected dashboard script to be versioned")
 	}
+	if !strings.Contains(body, `class="nav-link active" href="/dashboard" aria-current="page"`) {
+		t.Fatal("expected dashboard navigation to identify the current page")
+	}
+	if !strings.Contains(body, `data-seerr-message role="status" aria-live="polite" aria-atomic="true"`) {
+		t.Fatal("expected request status messages to be announced to assistive technology")
+	}
+	if strings.Contains(body, "Services connected") {
+		t.Fatal("dashboard should not claim all services are connected unconditionally")
+	}
 }
 
 func TestDashboardTemplateDisclosesStaleData(t *testing.T) {

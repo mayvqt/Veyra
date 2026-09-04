@@ -84,7 +84,7 @@ func (h *Handlers) LoginPost(w http.ResponseWriter, r *http.Request) {
 	if r.FormValue("remember_me") == "on" {
 		sessionDuration = auth.RememberSessionDuration
 	}
-	sessionID, err := h.authSvc.CreateSessionWithDuration(r.Context(), user, token, r, sessionDuration)
+	sessionID, err := h.authSvc.CreateSessionWithDuration(r.Context(), user, token, middleware.ClientIP(r), r.UserAgent(), sessionDuration)
 	if err != nil {
 		http.Error(w, "failed to create session", http.StatusInternalServerError)
 		return

@@ -167,6 +167,23 @@ func setupInputFromValues(values map[string]string) SetupInput {
 }
 
 func SaveSetup(ctx context.Context, db *sql.DB, crypto *security.Crypto, in SetupInput) error {
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin setup update: %w", err)
+	}
+	defer tx.Rollback()
+	if err := SaveSetupTx(ctx, tx, crypto, in); err != nil {
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit setup update: %w", err)
+	}
+	return nil
+}
+
+// SaveSetupTx writes setup settings using an existing transaction. The caller
+// owns the transaction and decides whether to commit or roll it back.
+func SaveSetupTx(ctx context.Context, tx *sql.Tx, crypto *security.Crypto, in SetupInput) error {
 	in = normalizeSetupInput(in)
 	if _, err := ParseMediaServerType(in.MediaServerType); err != nil {
 		return err
@@ -179,7 +196,7 @@ func SaveSetup(ctx context.Context, db *sql.DB, crypto *security.Crypto, in Setu
 		}
 		encrypted[key] = enc
 	}
-	return store.UpsertSettings(ctx, db, encrypted)
+	return store.UpsertSettingsTx(ctx, tx, encrypted)
 }
 
 func setupInputValues(in SetupInput) map[string]string {

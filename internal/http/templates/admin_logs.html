@@ -16,13 +16,13 @@
           <a class="nav-link" href="/admin">Overview</a>
           <a class="nav-link" href="/admin/settings">Settings</a>
           <a class="nav-link" href="/admin/users">Users</a>
-          <a class="nav-link active" href="/admin/logs">Logs</a>
+          <a class="nav-link active" href="/admin/logs" aria-current="page">Logs</a>
           <a class="nav-link" href="/admin/playback">Playback</a>
           <a class="nav-link" href="/admin/integrations">Integrations</a>
         </nav>
         <form method="post" action="/logout" class="topbar-logout">
           <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
-          <button class="btn secondary" type="submit">Log out</button>
+          <button class="btn secondary" type="submit">Sign out</button>
         </form>
       </div>
     </div>

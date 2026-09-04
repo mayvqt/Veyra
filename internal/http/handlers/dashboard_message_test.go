@@ -20,7 +20,7 @@ func TestDashboardRendersAdminMessage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	raw, err := h.authSvc.CreateSession(context.Background(), auth.User{ID: urow.ID, MediaServerUserID: urow.MediaServerUserID, Username: urow.Username, DisplayName: urow.DisplayName, IsAdmin: urow.IsAdmin}, "bad-token", httptest.NewRequest(http.MethodGet, "/", nil))
+	raw, err := h.authSvc.CreateSession(context.Background(), auth.User{ID: urow.ID, MediaServerUserID: urow.MediaServerUserID, Username: urow.Username, DisplayName: urow.DisplayName, IsAdmin: urow.IsAdmin}, "bad-token", "127.0.0.1", "test-agent")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,7 +50,7 @@ func TestDashboardUsesStoredAppNameFromBatchedSettings(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	raw, err := h.authSvc.CreateSession(context.Background(), auth.User{ID: urow.ID, MediaServerUserID: urow.MediaServerUserID, Username: urow.Username, DisplayName: urow.DisplayName, IsAdmin: urow.IsAdmin}, "bad-token", httptest.NewRequest(http.MethodGet, "/", nil))
+	raw, err := h.authSvc.CreateSession(context.Background(), auth.User{ID: urow.ID, MediaServerUserID: urow.MediaServerUserID, Username: urow.Username, DisplayName: urow.DisplayName, IsAdmin: urow.IsAdmin}, "bad-token", "127.0.0.1", "test-agent")
 	if err != nil {
 		t.Fatal(err)
 	}

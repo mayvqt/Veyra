@@ -315,6 +315,51 @@ func TestAdminSettingsPostUpdatesStoredSetupConfigAndRestarts(t *testing.T) {
 	}
 }
 
+func TestAdminSettingsPostRollsBackRegularSettingsWhenSetupSaveFails(t *testing.T) {
+	h, db := mkHandlers(t)
+	defer db.Close()
+	if err := config.SaveSetup(context.Background(), db, security.NewCrypto(h.cfg.EncryptionKey), config.SetupInput{
+		AppBaseURL:      "https://veyra.setup",
+		MediaServerType: config.MediaServerJellyfin.String(),
+		MediaServerURL:  "http://mediaserver:8096",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`CREATE TRIGGER reject_setup_settings BEFORE UPDATE ON settings
+WHEN NEW.key LIKE 'setup.%' BEGIN SELECT RAISE(ABORT, 'setup write rejected'); END`); err != nil {
+		t.Fatal(err)
+	}
+
+	get := httptest.NewRecorder()
+	getReq := httptest.NewRequest(http.MethodGet, "/admin/settings", nil)
+	h.AdminSettingsGet(get, getReq)
+	cookies := get.Result().Cookies()
+	form := url.Values{}
+	form.Set("csrf_token", cookies[0].Value)
+	form.Set("app_name", "should-rollback")
+	form.Set("accent_color", "#d43f24")
+	form.Set("media_server_public_url", "https://jf.public")
+	form.Set("seerr_public_url", "https://se.public")
+	form.Set("setup_app_base_url", "https://veyra.changed")
+	form.Set("setup_media_server_type", config.MediaServerJellyfin.String())
+	form.Set("setup_media_server_url", "http://mediaserver:8096")
+	post := httptest.NewRecorder()
+	postReq := httptest.NewRequest(http.MethodPost, "/admin/settings", strings.NewReader(form.Encode()))
+	postReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	postReq.AddCookie(cookies[0])
+	h.AdminSettingsPost(post, postReq)
+	if post.Code != http.StatusInternalServerError {
+		t.Fatalf("want 500 got %d", post.Code)
+	}
+	value, err := store.GetSetting(context.Background(), db, settingAppName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if value != "" {
+		t.Fatalf("regular setting committed despite setup failure: %q", value)
+	}
+}
+
 func TestSeerrSearchReturnsResults(t *testing.T) {
 	h, db := mkHandlers(t)
 	defer db.Close()
@@ -342,7 +387,7 @@ func TestSeerrRequestPostCreatesRequestForResolvedUser(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	raw, err := h.authSvc.CreateSession(context.Background(), auth.User{ID: urow.ID, MediaServerUserID: urow.MediaServerUserID, Username: urow.Username, DisplayName: urow.DisplayName, IsAdmin: false}, "tok", httptest.NewRequest(http.MethodGet, "/", nil))
+	raw, err := h.authSvc.CreateSession(context.Background(), auth.User{ID: urow.ID, MediaServerUserID: urow.MediaServerUserID, Username: urow.Username, DisplayName: urow.DisplayName, IsAdmin: false}, "tok", "127.0.0.1", "test-agent")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -389,7 +434,7 @@ func TestSeerrRequestPostRequiresExplicitTVSeason(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			raw, err := h.authSvc.CreateSession(context.Background(), auth.User{ID: urow.ID, MediaServerUserID: urow.MediaServerUserID, Username: urow.Username, DisplayName: urow.DisplayName, IsAdmin: false}, "tok", httptest.NewRequest(http.MethodGet, "/", nil))
+			raw, err := h.authSvc.CreateSession(context.Background(), auth.User{ID: urow.ID, MediaServerUserID: urow.MediaServerUserID, Username: urow.Username, DisplayName: urow.DisplayName, IsAdmin: false}, "tok", "127.0.0.1", "test-agent")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -428,7 +473,7 @@ func TestSeerrRequestPostRequiresResolvedUser(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	raw, err := h.authSvc.CreateSession(context.Background(), auth.User{ID: urow.ID, MediaServerUserID: urow.MediaServerUserID, Username: urow.Username, DisplayName: urow.DisplayName, IsAdmin: false}, "tok", httptest.NewRequest(http.MethodGet, "/", nil))
+	raw, err := h.authSvc.CreateSession(context.Background(), auth.User{ID: urow.ID, MediaServerUserID: urow.MediaServerUserID, Username: urow.Username, DisplayName: urow.DisplayName, IsAdmin: false}, "tok", "127.0.0.1", "test-agent")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -462,7 +507,7 @@ func TestSeerrRequestPostReturnsSanitizedUpstreamError(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	raw, err := h.authSvc.CreateSession(context.Background(), auth.User{ID: urow.ID, MediaServerUserID: urow.MediaServerUserID, Username: urow.Username, DisplayName: urow.DisplayName, IsAdmin: false}, "tok", httptest.NewRequest(http.MethodGet, "/", nil))
+	raw, err := h.authSvc.CreateSession(context.Background(), auth.User{ID: urow.ID, MediaServerUserID: urow.MediaServerUserID, Username: urow.Username, DisplayName: urow.DisplayName, IsAdmin: false}, "tok", "127.0.0.1", "test-agent")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -508,7 +553,8 @@ func TestHomeRedirectsToDashboardWithValidSession(t *testing.T) {
 		context.Background(),
 		auth.User{ID: urow.ID, MediaServerUserID: urow.MediaServerUserID, Username: urow.Username, DisplayName: urow.DisplayName, IsAdmin: urow.IsAdmin},
 		"tok",
-		httptest.NewRequest(http.MethodGet, "/", nil),
+		"127.0.0.1",
+		"test-agent",
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -543,7 +589,8 @@ func TestHomeRedirectsToAdminWithValidAdminSession(t *testing.T) {
 		context.Background(),
 		auth.User{ID: urow.ID, MediaServerUserID: urow.MediaServerUserID, Username: urow.Username, DisplayName: urow.DisplayName, IsAdmin: urow.IsAdmin},
 		"tok",
-		httptest.NewRequest(http.MethodGet, "/", nil),
+		"127.0.0.1",
+		"test-agent",
 	)
 	if err != nil {
 		t.Fatal(err)

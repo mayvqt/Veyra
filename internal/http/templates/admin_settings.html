@@ -14,7 +14,7 @@
         <nav class="topnav">
           <a class="nav-link" href="/dashboard">Dashboard</a>
           <a class="nav-link" href="/admin">Overview</a>
-          <a class="nav-link active" href="/admin/settings">Settings</a>
+          <a class="nav-link active" href="/admin/settings" aria-current="page">Settings</a>
           <a class="nav-link" href="/admin/users">Users</a>
           <a class="nav-link" href="/admin/logs">Logs</a>
           <a class="nav-link" href="/admin/playback">Playback</a>
@@ -22,7 +22,7 @@
         </nav>
         <form method="post" action="/logout" class="topbar-logout">
           <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
-          <button class="btn secondary" type="submit">Log out</button>
+          <button class="btn secondary" type="submit">Sign out</button>
         </form>
       </div>
     </div>

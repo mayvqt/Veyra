@@ -83,9 +83,9 @@
     }
 
     if (row.mediaType === "tv" && row.canRequest && row.seasons && row.seasons.length > 0) {
-      var picker = document.createElement("label");
+      var picker = document.createElement("fieldset");
       picker.className = "request-bot-season";
-      var pickerText = document.createElement("span");
+      var pickerText = document.createElement("legend");
       pickerText.textContent = "Seasons";
       var choices = document.createElement("div");
       choices.className = "request-bot-season-options";
@@ -152,8 +152,15 @@
       return;
     }
 
+    var searchSequence = 0;
+    var searchController = null;
     form.addEventListener("submit", function (event) {
       event.preventDefault();
+      var requestSequence = ++searchSequence;
+      if (searchController && typeof searchController.abort === "function") {
+        searchController.abort();
+      }
+      searchController = typeof window.AbortController === "function" ? new window.AbortController() : null;
       var q = (query.value || "").trim();
       dashboard.clearNode(results);
       if (q.length < 2) {
@@ -161,13 +168,20 @@
         return;
       }
       dashboard.setMessage(message, "Searching...", "");
-      fetch("/api/seerr/search?q=" + encodeURIComponent(q), {
+      var fetchOptions = {
         headers: { "Accept": "application/json" },
         credentials: "same-origin",
         cache: "no-store"
-      }).then(function (response) {
+      };
+      if (searchController) {
+        fetchOptions.signal = searchController.signal;
+      }
+      fetch("/api/seerr/search?q=" + encodeURIComponent(q), fetchOptions).then(function (response) {
         return parseJSONResponse(response, "Search failed.");
       }).then(function (data) {
+        if (requestSequence !== searchSequence) {
+          return;
+        }
         var rows = data.results || [];
         dashboard.clearNode(results);
         if (rows.length === 0) {
@@ -179,6 +193,9 @@
           results.appendChild(renderSearchResult(row, csrf ? csrf.value : ""));
         });
       }).catch(function (err) {
+        if (requestSequence !== searchSequence || err.name === "AbortError") {
+          return;
+        }
         dashboard.setMessage(message, err.message || "Search failed.", "error");
       });
     });

@@ -21,7 +21,7 @@ func TestMediaServerPosterReturnsBadGatewayWhenAPIKeyMissing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	raw, err := h.authSvc.CreateSession(context.Background(), auth.User{ID: urow.ID, MediaServerUserID: urow.MediaServerUserID, Username: urow.Username, DisplayName: urow.DisplayName, IsAdmin: urow.IsAdmin}, "token", httptest.NewRequest(http.MethodGet, "/", nil))
+	raw, err := h.authSvc.CreateSession(context.Background(), auth.User{ID: urow.ID, MediaServerUserID: urow.MediaServerUserID, Username: urow.Username, DisplayName: urow.DisplayName, IsAdmin: urow.IsAdmin}, "token", "127.0.0.1", "test-agent")
 	if err != nil {
 		t.Fatal(err)
 	}

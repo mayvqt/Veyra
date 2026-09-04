@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -21,7 +20,7 @@ func TestResolveSessionFailsClosedWhenAdminRefreshFails(t *testing.T) {
 	}
 	checker := &checkerStub{err: errors.New("media server unavailable")}
 	svc := NewService(db, security.NewCrypto("12345678901234567890123456789012"), testSessionSecret, checker)
-	raw, err := svc.CreateSession(context.Background(), User{ID: urow.ID, MediaServerUserID: urow.MediaServerUserID, Username: urow.Username, IsAdmin: true}, "tok", httptest.NewRequest("GET", "/", nil))
+	raw, err := svc.CreateSession(context.Background(), User{ID: urow.ID, MediaServerUserID: urow.MediaServerUserID, Username: urow.Username, IsAdmin: true}, "tok", "127.0.0.1", "test-agent")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,10 +102,7 @@ func TestCreateResolveDestroySession(t *testing.T) {
 		t.Fatal(err)
 	}
 	svc := NewService(db, security.NewCrypto("12345678901234567890123456789012"), testSessionSecret, nil)
-	r := httptest.NewRequest("GET", "/", nil)
-	r.RemoteAddr = "1.2.3.4:5555"
-
-	raw, err := svc.CreateSession(context.Background(), User{ID: urow.ID, MediaServerUserID: urow.MediaServerUserID, Username: urow.Username, DisplayName: urow.DisplayName, IsAdmin: urow.IsAdmin}, "tok", r)
+	raw, err := svc.CreateSession(context.Background(), User{ID: urow.ID, MediaServerUserID: urow.MediaServerUserID, Username: urow.Username, DisplayName: urow.DisplayName, IsAdmin: urow.IsAdmin}, "tok", "1.2.3.4", "test-agent")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,6 +112,9 @@ func TestCreateResolveDestroySession(t *testing.T) {
 	}
 	if user.ID != urow.ID || sess.IDHash == "" {
 		t.Fatal("session resolve mismatch")
+	}
+	if sess.IPAddress != "1.2.3.4" || sess.UserAgent != "test-agent" {
+		t.Fatalf("session metadata mismatch: ip=%q user-agent=%q", sess.IPAddress, sess.UserAgent)
 	}
 	pt, err := svc.DecryptSessionToken(sess.MediaServerAccessTokenEncrypted)
 	if err != nil || pt != "tok" {
@@ -135,9 +134,7 @@ func TestCreateSessionWithDurationSetsMatchingExpiries(t *testing.T) {
 		t.Fatal(err)
 	}
 	svc := NewService(db, security.NewCrypto("12345678901234567890123456789012"), testSessionSecret, nil)
-	r := httptest.NewRequest("GET", "/", nil)
-
-	raw, err := svc.CreateSessionWithDuration(context.Background(), User{ID: urow.ID, MediaServerUserID: urow.MediaServerUserID, Username: urow.Username, DisplayName: urow.DisplayName, IsAdmin: false}, "tok", r, RememberSessionDuration)
+	raw, err := svc.CreateSessionWithDuration(context.Background(), User{ID: urow.ID, MediaServerUserID: urow.MediaServerUserID, Username: urow.Username, DisplayName: urow.DisplayName, IsAdmin: false}, "tok", "1.2.3.4", "test-agent", RememberSessionDuration)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -163,9 +160,7 @@ func TestResolveSessionRefreshesAdminEvery15Min(t *testing.T) {
 		t.Fatal(err)
 	}
 	svc := NewService(db, security.NewCrypto("12345678901234567890123456789012"), testSessionSecret, &checkerStub{isAdmin: false})
-	r := httptest.NewRequest("GET", "/", nil)
-	r.RemoteAddr = "1.2.3.4:5555"
-	raw, err := svc.CreateSession(context.Background(), User{ID: urow.ID, MediaServerUserID: urow.MediaServerUserID, Username: urow.Username, DisplayName: urow.DisplayName, IsAdmin: true}, "tok", r)
+	raw, err := svc.CreateSession(context.Background(), User{ID: urow.ID, MediaServerUserID: urow.MediaServerUserID, Username: urow.Username, DisplayName: urow.DisplayName, IsAdmin: true}, "tok", "1.2.3.4", "test-agent")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -193,7 +188,7 @@ func TestResolveSessionRefreshesAdminWhenCheckTimestampIsInFuture(t *testing.T) 
 	}
 	checker := &checkerStub{isAdmin: false}
 	svc := NewService(db, security.NewCrypto("12345678901234567890123456789012"), testSessionSecret, checker)
-	raw, err := svc.CreateSession(context.Background(), User{ID: urow.ID, MediaServerUserID: urow.MediaServerUserID, Username: urow.Username, IsAdmin: true}, "tok", httptest.NewRequest("GET", "/", nil))
+	raw, err := svc.CreateSession(context.Background(), User{ID: urow.ID, MediaServerUserID: urow.MediaServerUserID, Username: urow.Username, IsAdmin: true}, "tok", "127.0.0.1", "test-agent")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -220,9 +215,7 @@ func TestResolveSessionPermissionChangeWritesAuditLog(t *testing.T) {
 		t.Fatal(err)
 	}
 	svc := NewService(db, security.NewCrypto("12345678901234567890123456789012"), testSessionSecret, &checkerStub{isAdmin: false})
-	r := httptest.NewRequest("GET", "/", nil)
-	r.RemoteAddr = "1.2.3.4:5555"
-	raw, err := svc.CreateSession(context.Background(), User{ID: urow.ID, MediaServerUserID: urow.MediaServerUserID, Username: urow.Username, DisplayName: urow.DisplayName, IsAdmin: true}, "tok", r)
+	raw, err := svc.CreateSession(context.Background(), User{ID: urow.ID, MediaServerUserID: urow.MediaServerUserID, Username: urow.Username, DisplayName: urow.DisplayName, IsAdmin: true}, "tok", "1.2.3.4", "test-agent")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -252,9 +245,7 @@ func TestResolveSessionFailsWhenAbsoluteLifetimeExpired(t *testing.T) {
 		t.Fatal(err)
 	}
 	svc := NewService(db, security.NewCrypto("12345678901234567890123456789012"), testSessionSecret, nil)
-	r := httptest.NewRequest("GET", "/", nil)
-	r.RemoteAddr = "1.2.3.4:5555"
-	raw, err := svc.CreateSession(context.Background(), User{ID: urow.ID, MediaServerUserID: urow.MediaServerUserID, Username: urow.Username, DisplayName: urow.DisplayName, IsAdmin: false}, "tok", r)
+	raw, err := svc.CreateSession(context.Background(), User{ID: urow.ID, MediaServerUserID: urow.MediaServerUserID, Username: urow.Username, DisplayName: urow.DisplayName, IsAdmin: false}, "tok", "1.2.3.4", "test-agent")
 	if err != nil {
 		t.Fatal(err)
 	}

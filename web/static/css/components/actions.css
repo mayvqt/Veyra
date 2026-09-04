@@ -14,6 +14,7 @@
   color: var(--accent-strong);
   background: linear-gradient(180deg, rgba(126, 167, 197, 0.16), rgba(197, 149, 95, 0.05));
   font-weight: 750;
+  white-space: nowrap;
   cursor: pointer;
   transition: border-color 0.15s ease, background 0.15s ease, filter 0.15s ease;
 }

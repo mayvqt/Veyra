@@ -28,6 +28,18 @@ func UpsertSettings(ctx context.Context, db *sql.DB, values map[string]string) e
 	}
 	defer tx.Rollback()
 
+	if err := UpsertSettingsTx(ctx, tx, values); err != nil {
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit settings update: %w", err)
+	}
+	return nil
+}
+
+// UpsertSettingsTx writes settings using an existing transaction. The caller
+// owns the transaction and decides whether to commit or roll it back.
+func UpsertSettingsTx(ctx context.Context, tx *sql.Tx, values map[string]string) error {
 	now := time.Now().UTC()
 	for key, value := range values {
 		if _, err := tx.ExecContext(ctx, `
@@ -36,9 +48,6 @@ ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated
 `, key, value, now); err != nil {
 			return fmt.Errorf("upsert setting %q: %w", key, err)
 		}
-	}
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("commit settings update: %w", err)
 	}
 	return nil
 }

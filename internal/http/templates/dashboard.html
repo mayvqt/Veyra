@@ -15,7 +15,7 @@
       </div>
       <div class="topbar-right">
         <nav class="topnav">
-          <a class="nav-link active" href="/dashboard">Dashboard</a>
+          <a class="nav-link active" href="/dashboard" aria-current="page">Dashboard</a>
           <a class="nav-link" href="/guide">Guide</a>
           {{ if .User.IsAdmin }}<a class="nav-link admin-nav-link" href="/admin">Admin</a>{{ end }}
         </nav>
@@ -36,7 +36,6 @@
           <button class="btn secondary" type="submit">Sign out</button>
         </form>
       </div>
-      <div class="rail-status"><span class="status-dot ok"></span><span>Services connected</span></div>
     </aside>
 
     <section class="container" data-dashboard-container>
@@ -72,7 +71,7 @@
           </label>
           <button class="btn" type="submit">Search</button>
         </form>
-        <div class="request-bot-message" data-seerr-message hidden></div>
+        <div class="request-bot-message" data-seerr-message role="status" aria-live="polite" aria-atomic="true" hidden></div>
         <ul class="request-bot-results" data-seerr-results></ul>
       </section>
       {{ end }}

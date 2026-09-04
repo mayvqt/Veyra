@@ -507,15 +507,6 @@ textarea:focus {
   text-transform: uppercase;
 }
 
-.rail-status {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--faint);
-  font-size: 0.68rem;
-  line-height: 1.35;
-}
-
 .rail-links {
   display: grid;
   gap: 0.35rem;
@@ -705,7 +696,6 @@ textarea:focus {
 
   body:not(.auth-page) .topbar-logout { margin-top: auto; }
   body:not(.auth-page) .topbar-logout .btn { width: 100%; }
-  .dashboard-rail .rail-status { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--line); }
 
   .dashboard-page .container {
     display: grid;
@@ -734,7 +724,6 @@ textarea:focus {
 }
 
 @media (max-width: 979px) {
-  .rail-status,
   .brand-caption { display: none; }
 
   body:not(.auth-page) .topbar {

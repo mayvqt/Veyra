@@ -52,17 +52,25 @@ func (h *Handlers) AdminSettingsPost(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	for k, v := range pairs {
-		if err := store.UpsertSetting(r.Context(), h.db, k, v); err != nil {
-			http.Error(w, "failed to save settings", http.StatusInternalServerError)
-			return
-		}
+	tx, err := h.db.BeginTx(r.Context(), nil)
+	if err != nil {
+		http.Error(w, "failed to save settings", http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+	if err := store.UpsertSettingsTx(r.Context(), tx, pairs); err != nil {
+		http.Error(w, "failed to save settings", http.StatusInternalServerError)
+		return
 	}
 	if setupChanged {
-		if err := config.SaveSetup(r.Context(), h.db, security.NewCrypto(h.cfg.EncryptionKey), setupIn); err != nil {
+		if err := config.SaveSetupTx(r.Context(), tx, security.NewCrypto(h.cfg.EncryptionKey), setupIn); err != nil {
 			http.Error(w, "failed to save setup settings", http.StatusInternalServerError)
 			return
 		}
+	}
+	if err := tx.Commit(); err != nil {
+		http.Error(w, "failed to save settings", http.StatusInternalServerError)
+		return
 	}
 	audit := map[string]string{"widgets": enabledWidgetSummary(pairs)}
 	if setupChanged {
