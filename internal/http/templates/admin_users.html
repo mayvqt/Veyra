@@ -63,8 +63,8 @@
             </div>
             <dl class="kv">
               <dt>{{ $.MediaServerName }} User ID</dt><dd>{{ .MediaServerUserID }}</dd>
-              <dt>Created</dt><dd>{{ .CreatedAt }}</dd>
-              <dt>Last Login</dt><dd>{{ .LastLoginAt }}</dd>
+              <dt>Created</dt><dd><time datetime="{{ .CreatedAtTime.Datetime }}">{{ .CreatedAtTime.Label }}</time></dd>
+              <dt>Last login</dt><dd>{{ if .LastLoginTime.Datetime }}<time datetime="{{ .LastLoginTime.Datetime }}">{{ .LastLoginTime.Label }}</time>{{ else }}{{ .LastLoginTime.Label }}{{ end }}</dd>
             </dl>
           </li>
           {{ end }}

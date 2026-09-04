@@ -54,6 +54,9 @@ func TestDashboardTemplateLabelsRequestPanel(t *testing.T) {
 	if !strings.Contains(body, `class="nav-link active" href="/dashboard" aria-current="page"`) {
 		t.Fatal("expected dashboard navigation to identify the current page")
 	}
+	if !strings.Contains(body, `<nav class="topnav" aria-label="Primary navigation">`) {
+		t.Fatal("expected dashboard navigation to have a clear accessible label")
+	}
 	if !strings.Contains(body, `data-seerr-message role="status" aria-live="polite" aria-atomic="true"`) {
 		t.Fatal("expected request status messages to be announced to assistive technology")
 	}
@@ -220,7 +223,7 @@ func TestAuthTemplatesDoNotRenderNavigation(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
-			h.render(w, tc.template, ViewData{AppName: "Veyra"})
+			h.render(w, tc.template, ViewData{AppName: "Veyra", Error: "Example error"})
 			if w.Code != http.StatusOK {
 				t.Fatalf("want 200 got %d", w.Code)
 			}
@@ -230,6 +233,9 @@ func TestAuthTemplatesDoNotRenderNavigation(t *testing.T) {
 			}
 			if strings.Contains(body, `class="topbar"`) || strings.Contains(body, `class="topnav"`) {
 				t.Fatalf("%s should not render app navigation", tc.template)
+			}
+			if !strings.Contains(body, `class="error" role="alert">Example error</p>`) {
+				t.Fatalf("%s should expose errors as alerts", tc.template)
 			}
 			if strings.Contains(body, `class="login-visual-copy"`) || strings.Contains(body, ">Watch<") || strings.Contains(body, ">Request<") || strings.Contains(body, ">Manage<") {
 				t.Fatalf("%s should not render fake navigation pills", tc.template)

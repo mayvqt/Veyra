@@ -49,7 +49,11 @@
         var key = current.getAttribute("data-dashboard-refresh");
         var next = doc.querySelector('[data-dashboard-refresh="' + key + '"]');
         if (next) {
+          var scrollLeft = current.scrollLeft;
+          var scrollTop = current.scrollTop;
           dashboard.replaceNodeContent(current, next);
+          current.scrollLeft = scrollLeft;
+          current.scrollTop = scrollTop;
         }
       });
       dashboard.initWidgets();

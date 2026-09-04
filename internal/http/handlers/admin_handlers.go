@@ -74,11 +74,11 @@ func (h *Handlers) AdminUsers(w http.ResponseWriter, r *http.Request) {
 		if row.IsAdmin {
 			view.AdminUsers++
 		}
-		lastLogin := "-"
+		lastLoginTime := AdminTimestamp{Label: "-"}
 		if row.LastLoginAt.Valid {
-			lastLogin = row.LastLoginAt.Time.Format(time.RFC3339)
+			lastLoginTime = adminTimestamp(row.LastLoginAt.Time)
 		}
-		view.Users = append(view.Users, AdminUserView{Username: row.Username, DisplayName: row.DisplayName, MediaServerUserID: row.MediaServerUserID, MediaServerURL: mediaServerUserURL(h.cfg.MediaServerPublicURL, row.MediaServerUserID), IsAdmin: row.IsAdmin, CreatedAt: row.CreatedAt.Format(time.RFC3339), LastLoginAt: lastLogin})
+		view.Users = append(view.Users, AdminUserView{Username: row.Username, DisplayName: row.DisplayName, MediaServerUserID: row.MediaServerUserID, MediaServerURL: mediaServerUserURL(h.cfg.MediaServerPublicURL, row.MediaServerUserID), IsAdmin: row.IsAdmin, CreatedAtTime: adminTimestamp(row.CreatedAt), LastLoginTime: lastLoginTime})
 	}
 	view.StandardUsers = view.TotalUsers - view.AdminUsers
 	h.render(w, "admin_users.html", view)
@@ -116,7 +116,6 @@ func (h *Handlers) AdminPlayback(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handlers) AdminIntegrations(w http.ResponseWriter, r *http.Request) {
 	u, _ := middleware.UserFromContext(r.Context())
-	now := time.Now().UTC()
 	settings := readSettings(r, h.db, settingAppName, settingMediaServerPublicURL, settingSeerrPublicURL)
 	j := h.cachedHealth(r, "admin:health:media_server", h.mediaserver)
 	s := h.cachedHealth(r, "admin:health:seerr", h.seerr)
@@ -126,11 +125,17 @@ func (h *Handlers) AdminIntegrations(w http.ResponseWriter, r *http.Request) {
 
 	view := ViewData{AppName: appNameFromSettings(settings, h.cfg.AppName), CSRFToken: middleware.EnsureCSRFToken(w, r, h.cfg.CookieSecure), Now: time.Now(), User: u, MediaServerName: h.cfg.MediaServerType.Label()}
 	view.ServiceStatuses = []ServiceStatus{
-		h.mediaserverServiceStatus(r, now, withDefault(readSettingFromMap(settings, settingMediaServerPublicURL), h.cfg.MediaServerPublicURL), j),
-		{Name: "Seerr", Internal: security.RedactURL(h.cfg.SeerrURL), Public: security.RedactURL(withDefault(readSettingFromMap(settings, settingSeerrPublicURL), h.cfg.SeerrPublicURL)), Health: integrationHealthStatus(seerrConfigured, s.OK), Configured: seerrConfigured, LastChecked: now.Format(time.RFC3339), LastError: healthErr(s), RecentErrors: combineIntegrationNotes("Configured: "+boolYesNo(seerrConfigured), h.serviceErrorHistory(r, "Seerr", 3))},
+		h.mediaserverServiceStatus(r, withDefault(readSettingFromMap(settings, settingMediaServerPublicURL), h.cfg.MediaServerPublicURL), j),
+		{Name: "Seerr", Internal: security.RedactURL(h.cfg.SeerrURL), Public: security.RedactURL(withDefault(readSettingFromMap(settings, settingSeerrPublicURL), h.cfg.SeerrPublicURL)), Health: integrationHealthStatus(seerrConfigured, s.OK), Configured: seerrConfigured, LastError: healthErr(s), RecentErrors: h.serviceErrorHistory(r, "Seerr", 3)},
 	}
 	for _, svc := range arrServices {
-		view.ServiceStatuses = append(view.ServiceStatuses, h.arrServiceStatus(r, now, svc, arrHealth[svc.Name]))
+		view.ServiceStatuses = append(view.ServiceStatuses, h.arrServiceStatus(r, svc, arrHealth[svc.Name]))
+	}
+	for _, service := range view.ServiceStatuses {
+		if !service.Configured {
+			view.HasUnconfiguredServices = true
+			break
+		}
 	}
 	h.render(w, "admin_integrations.html", view)
 }
@@ -175,7 +180,7 @@ func (h *Handlers) cachedHealthIfConfigured(r *http.Request, svc arrAdminService
 	return h.cachedHealth(r, svc.CacheKey, svc.Client)
 }
 
-func (h *Handlers) mediaserverServiceStatus(r *http.Request, now time.Time, publicURL string, health integrations.HealthStatus) ServiceStatus {
+func (h *Handlers) mediaserverServiceStatus(r *http.Request, publicURL string, health integrations.HealthStatus) ServiceStatus {
 	name := h.cfg.MediaServerType.Label()
 	configured := h.mediaServerConfigured()
 	status := ServiceStatus{
@@ -185,9 +190,8 @@ func (h *Handlers) mediaserverServiceStatus(r *http.Request, now time.Time, publ
 		Health:       integrationHealthStatus(configured, health.OK),
 		Configured:   configured,
 		Required:     true,
-		LastChecked:  now.Format(time.RFC3339),
 		LastError:    healthErr(health),
-		RecentErrors: combineIntegrationNotes("Configured: "+boolYesNo(configured), h.serviceErrorHistory(r, name, 3)),
+		RecentErrors: h.serviceErrorHistory(r, name, 3),
 	}
 	summary, ok := h.cachedMediaServerAdminSummary(r)
 	if !ok {
@@ -208,16 +212,15 @@ func (h *Handlers) mediaserverServiceStatus(r *http.Request, now time.Time, publ
 	return status
 }
 
-func (h *Handlers) arrServiceStatus(r *http.Request, now time.Time, svc arrAdminService, health integrations.HealthStatus) ServiceStatus {
+func (h *Handlers) arrServiceStatus(r *http.Request, svc arrAdminService, health integrations.HealthStatus) ServiceStatus {
 	status := ServiceStatus{
 		Name:         svc.Name,
 		Internal:     security.RedactURL(svc.Internal),
 		Health:       integrationHealthStatus(svc.Configured, health.OK),
 		Configured:   svc.Configured,
 		Required:     false,
-		LastChecked:  now.Format(time.RFC3339),
 		LastError:    healthErr(health),
-		RecentErrors: combineIntegrationNotes("Configured: "+boolYesNo(svc.Configured), h.serviceErrorHistory(r, svc.Name, 3)),
+		RecentErrors: h.serviceErrorHistory(r, svc.Name, 3),
 	}
 	summary, ok := h.cachedArrAdminSummary(r, svc)
 	if !ok {

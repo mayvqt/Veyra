@@ -14,7 +14,7 @@
         <span class="brand-caption">Media portal</span>
       </div>
       <div class="topbar-right">
-        <nav class="topnav">
+        <nav class="topnav" aria-label="Primary navigation">
           <a class="nav-link active" href="/dashboard" aria-current="page">Dashboard</a>
           <a class="nav-link" href="/guide">Guide</a>
           {{ if .User.IsAdmin }}<a class="nav-link admin-nav-link" href="/admin">Admin</a>{{ end }}

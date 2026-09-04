@@ -43,17 +43,6 @@ func enabledWidgetSummary(pairs map[string]string) string {
 	return strings.Join(enabled, ", ")
 }
 
-func combineIntegrationNotes(configured string, recent []string) []string {
-	out := []string{configured}
-	if len(recent) == 0 {
-		out = append(out, "Recent Failures: none")
-		return out
-	}
-	out = append(out, "Recent Failures:")
-	out = append(out, recent...)
-	return out
-}
-
 func (h *Handlers) appName(r *http.Request) string {
 	return withDefault(readSetting(r, h.db, settingAppName), h.cfg.AppName)
 }
@@ -118,13 +107,6 @@ func boolToStatus(ok bool) string {
 		return "Online"
 	}
 	return "Offline"
-}
-
-func boolYesNo(ok bool) string {
-	if ok {
-		return "Yes"
-	}
-	return "No"
 }
 
 func healthErr(h integrations.HealthStatus) string {
@@ -217,7 +199,7 @@ func (h *Handlers) serviceErrorHistory(r *http.Request, service string, limit in
 		if msg == "" {
 			msg = "unknown error"
 		}
-		out = append(out, row.CreatedAt.Format(time.RFC3339)+" - "+security.RedactErr(errors.New(msg)))
+		out = append(out, adminTimestamp(row.CreatedAt).Label+" — "+security.RedactErr(errors.New(msg)))
 	}
 	return out
 }
@@ -258,6 +240,14 @@ func formatSessionTime(t time.Time) string {
 		return "-"
 	}
 	return t.UTC().Format(time.RFC3339)
+}
+
+func adminTimestamp(t time.Time) AdminTimestamp {
+	if t.IsZero() {
+		return AdminTimestamp{Label: "-"}
+	}
+	t = t.UTC()
+	return AdminTimestamp{Datetime: t.Format(time.RFC3339), Label: t.Format("2 Jan 2006, 15:04 UTC")}
 }
 
 func formatQuotaValue(q seerr.Quota) string {

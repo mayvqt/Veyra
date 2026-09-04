@@ -38,15 +38,16 @@ func auditLogView(row store.AuditLogRow) AuditLogView {
 	}
 	metadata := auditMetadataMap(metadataRaw)
 	view := AuditLogView{
-		Action:    row.Action,
-		Target:    target,
-		Actor:     auditActor(row, target),
-		IPAddress: ip,
-		UserID:    userID,
-		Metadata:  auditMetadataSummary(metadata),
-		CreatedAt: row.CreatedAt.Format(time.RFC3339),
-		Category:  auditCategory(row.Action),
-		Severity:  auditSeverity(row.Action),
+		Action:        row.Action,
+		Target:        target,
+		Actor:         auditActor(row, target),
+		IPAddress:     ip,
+		UserID:        userID,
+		Metadata:      auditMetadataSummary(metadata),
+		CreatedAt:     row.CreatedAt.Format(time.RFC3339),
+		CreatedAtTime: adminTimestamp(row.CreatedAt),
+		Category:      auditCategory(row.Action),
+		Severity:      auditSeverity(row.Action),
 	}
 	view.Message, view.Detail = auditMessage(row.Action, target, metadata, view.Actor, ip)
 	return view

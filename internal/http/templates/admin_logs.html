@@ -54,7 +54,7 @@
             </dl>
           </div>
           <div class="audit-meta">
-            <span>{{ .CreatedAt }}</span>
+            <time datetime="{{ .CreatedAtTime.Datetime }}">{{ .CreatedAtTime.Label }}</time>
             <span>{{ .IPAddress }}</span>
           </div>
         </li>

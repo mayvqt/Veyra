@@ -62,7 +62,6 @@ type ServiceStatus struct {
 	Health       string
 	Configured   bool
 	Required     bool
-	LastChecked  string
 	LastError    string
 	RecentErrors []string
 	Version      string
@@ -70,6 +69,13 @@ type ServiceStatus struct {
 	Stats        []AdminStat
 	Issues       []string
 	DiskWarnings []string
+}
+
+// AdminTimestamp keeps the machine-readable instant beside the compact label
+// shown in admin screens.
+type AdminTimestamp struct {
+	Datetime string
+	Label    string
 }
 
 type AdminStat struct {
@@ -115,22 +121,23 @@ type AdminUserView struct {
 	MediaServerUserID string
 	MediaServerURL    string
 	IsAdmin           bool
-	CreatedAt         string
-	LastLoginAt       string
+	CreatedAtTime     AdminTimestamp
+	LastLoginTime     AdminTimestamp
 }
 
 type AuditLogView struct {
-	Action    string
-	Target    string
-	Actor     string
-	Message   string
-	Detail    string
-	Severity  string
-	Category  string
-	IPAddress string
-	UserID    string
-	CreatedAt string
-	Metadata  string
+	Action        string
+	Target        string
+	Actor         string
+	Message       string
+	Detail        string
+	Severity      string
+	Category      string
+	IPAddress     string
+	UserID        string
+	CreatedAt     string
+	CreatedAtTime AdminTimestamp
+	Metadata      string
 }
 
 type auditStats struct {
@@ -229,6 +236,7 @@ type ViewData struct {
 	SettingsMediaServerPublic string
 	SettingsSeerrPublic       string
 	ServiceStatuses           []ServiceStatus
+	HasUnconfiguredServices   bool
 	Playback                  []AdminPlaybackSession
 	Users                     []AdminUserView
 	AuditLogs                 []AuditLogView

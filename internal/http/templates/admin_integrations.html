@@ -72,9 +72,7 @@
           </div>
           {{ end }}
 
-          <div class="integration-card-footer">
-            <span class="meta-line">Checked {{ .LastChecked }}</span>
-            {{ if or .LastError .Issues .DiskWarnings .RecentErrors }}
+          {{ if or .LastError .Issues .DiskWarnings .RecentErrors }}<div class="integration-card-footer">
             <details class="integration-details">
               <summary>View details</summary>
               {{ if .LastError }}
@@ -108,7 +106,7 @@
 
               {{ if .RecentErrors }}
               <section class="integration-detail">
-                <h3>Status notes</h3>
+                <h3>Recent failures</h3>
                 <ul class="stack integration-notes">
                 {{ range .RecentErrors }}
                   <li class="stack-item">{{ . }}</li>
@@ -116,16 +114,16 @@
                 </ul>
               </section>
               {{ end }}
+
             </details>
-            {{ end }}
-          </div>
+          </div>{{ end }}
         </article>
         {{ end }}
         {{ end }}
         </div>
       </section>
 
-      <section class="panel integrations-panel">
+      {{ if .HasUnconfiguredServices }}<section class="panel integrations-panel">
         <div class="panel-title-row">
           <div>
             <h2>Not configured</h2>
@@ -139,7 +137,7 @@
           <li class="stack-item integration-setup-row {{ if .Required }}integration-required{{ else }}integration-neutral{{ end }}">
             <div>
               <strong>{{ .Name }}</strong>
-              <span class="meta-line">{{ if .Required }}Required setup missing{{ else }}Optional connector not configured{{ end }}</span>
+            <span class="meta-line">{{ if .Required }}Required connection missing{{ else }}Optional connector not configured{{ end }}</span>
             </div>
             <span class="status-inline">
               <span class="status-dot integration-health neutral" role="img" aria-label="{{ .Name }} {{ .Health }}" title="{{ .Name }} {{ .Health }}"></span>
@@ -149,7 +147,7 @@
         {{ end }}
         {{ end }}
         </ul>
-      </section>
+      </section>{{ end }}
 
     </section>
   </main>

@@ -22,16 +22,39 @@ func TestAdminIntegrationsRendersUsefulStatusCards(t *testing.T) {
 		t.Fatalf("want 200 got %d", w.Code)
 	}
 	body := w.Body.String()
-	for _, s := range []string{"Jellyfin", "Seerr", "Sonarr", "Radarr", "Prowlarr", "Status notes", "Configured services"} {
+	for _, s := range []string{"Jellyfin", "Seerr", "Sonarr", "Radarr", "Prowlarr", "Configured services"} {
 		if !strings.Contains(body, s) {
 			t.Fatalf("expected integrations page to contain %q", s)
 		}
+	}
+	if strings.Contains(body, "Page rendered") || strings.Contains(body, "Status notes") || strings.Contains(body, "Recent Failures") {
+		t.Fatal("healthy integrations should not render placeholder status notes")
 	}
 	if !strings.Contains(body, `class="status-dot integration-health`) {
 		t.Fatal("expected integrations page to render health as status dots")
 	}
 	if strings.Contains(body, "integration-pill") {
 		t.Fatal("expected integrations page not to render old health pills")
+	}
+}
+
+func TestAdminIntegrationsHidesEmptyUnconfiguredSection(t *testing.T) {
+	h, db := mkHandlers(t)
+	defer db.Close()
+	h.cfg.SeerrURL = "seerr"
+	h.cfg.SeerrPublicURL = "https://seerr.example"
+	h.cfg.SeerrAPIKey = "key"
+	h.cfg.SonarrURL = "sonarr"
+	h.cfg.SonarrAPIKey = "key"
+	h.cfg.RadarrURL = "radarr"
+	h.cfg.RadarrAPIKey = "key"
+	h.cfg.ProwlarrURL = "prowlarr"
+	h.cfg.ProwlarrAPIKey = "key"
+
+	w := httptest.NewRecorder()
+	h.AdminIntegrations(w, httptest.NewRequest(http.MethodGet, "/admin/integrations", nil))
+	if strings.Contains(w.Body.String(), ">Not configured<") {
+		t.Fatal("not configured section should be omitted when every service is configured")
 	}
 }
 

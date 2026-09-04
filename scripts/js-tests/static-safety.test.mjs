@@ -25,6 +25,8 @@ test("browser scripts avoid unsafe dynamic code and HTML sinks", async () => {
       assert.match(source, /if \(!dashboardIsSafeToRefresh\(\)\)/);
       assert.match(source, /refreshInFlight/);
       assert.match(source, /data-dashboard-refresh/);
+      assert.match(source, /scrollLeft/);
+      assert.match(source, /scrollTop/);
       assert.doesNotMatch(source, /data-dashboard-container.*replaceNodeContent/);
     }
   }

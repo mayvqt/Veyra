@@ -14,3 +14,11 @@ func TestFormatSessionTime(t *testing.T) {
 		t.Fatalf("unexpected UTC format: %s", got)
 	}
 }
+
+func TestAdminTimestampIsCompactAndMachineReadable(t *testing.T) {
+	ts := time.Date(2026, 5, 14, 0, 30, 0, 0, time.FixedZone("NZST", 12*60*60))
+	got := adminTimestamp(ts)
+	if got.Datetime != "2026-05-13T12:30:00Z" || got.Label != "13 May 2026, 12:30 UTC" {
+		t.Fatalf("unexpected admin timestamp: %+v", got)
+	}
+}

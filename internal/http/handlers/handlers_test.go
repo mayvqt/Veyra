@@ -132,6 +132,9 @@ func TestGuideRendersLinks(t *testing.T) {
 	if !strings.Contains(body, "Open Seerr") {
 		t.Fatal("expected guide to include Seerr action")
 	}
+	if !strings.Contains(body, `<nav class="topnav" aria-label="Primary navigation">`) {
+		t.Fatal("expected guide navigation to have a clear accessible label")
+	}
 }
 
 func TestAdminSettingsPostSavesRequestToggle(t *testing.T) {
