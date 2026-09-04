@@ -192,9 +192,9 @@ func TestAdminSettingsRendersStoredSetupConfig(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/admin/settings", nil)
 	h.AdminSettingsGet(w, r)
 	body := w.Body.String()
-	assertTextOrder(t, body, "<h2>Dashboard</h2>", "<h2>Dashboard Widgets</h2>", "<h2>Branding</h2>", "<h2>Dashboard Links</h2>", "<h2>Service Settings</h2>")
+	assertTextOrder(t, body, "<h2>Dashboard</h2>", "<h2>Dashboard widgets</h2>", "<h2>Branding</h2>", "<h2>Dashboard links</h2>", "<h2>Service settings</h2>")
 	assertTextOrder(t, body, "<h3>Media Server</h3>", `name="setup_media_server_type"`, `name="setup_media_server_url"`, `name="setup_media_server_api_key"`)
-	if !strings.Contains(body, "Service Settings") {
+	if !strings.Contains(body, "Service settings") {
 		t.Fatal("expected service settings section")
 	}
 	if !strings.Contains(body, `name="setup_media_server_url" value="http://mediaserver:8096"`) {

@@ -22,7 +22,7 @@ func TestAdminIntegrationsRendersUsefulStatusCards(t *testing.T) {
 		t.Fatalf("want 200 got %d", w.Code)
 	}
 	body := w.Body.String()
-	for _, s := range []string{"Jellyfin", "Seerr", "Sonarr", "Radarr", "Prowlarr", "Status Notes", "Configured:"} {
+	for _, s := range []string{"Jellyfin", "Seerr", "Sonarr", "Radarr", "Prowlarr", "Status notes", "Configured services"} {
 		if !strings.Contains(body, s) {
 			t.Fatalf("expected integrations page to contain %q", s)
 		}
@@ -49,7 +49,7 @@ func TestAdminIntegrationsRendersUnconfiguredOptionalConnectorsCompactly(t *test
 		t.Fatalf("want 200 got %d", w.Code)
 	}
 	body := w.Body.String()
-	for _, want := range []string{"Optional Connectors", "Optional connector not configured", "integration-neutral"} {
+	for _, want := range []string{"Not configured", "Optional connector not configured", "integration-neutral"} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("expected integrations page to contain %q", want)
 		}

@@ -143,6 +143,13 @@
 
 .dashboard-grid { gap: var(--space-3); }
 
+.guide-page .grid > .panel:nth-child(n + 3) {
+  border-inline: 0;
+  border-radius: 0;
+  background: transparent;
+  padding-inline: 0;
+}
+
 .panel {
   grid-column: span 12;
   min-width: 0;

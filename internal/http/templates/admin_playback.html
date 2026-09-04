@@ -11,7 +11,7 @@
     <div class="topbar">
       <div class="brand">{{ .AppName }}</div>
       <div class="topbar-right">
-        <nav class="topnav">
+        <nav class="topnav" aria-label="Admin navigation">
           <a class="nav-link" href="/dashboard">Dashboard</a>
           <a class="nav-link" href="/admin">Overview</a>
           <a class="nav-link" href="/admin/settings">Settings</a>
@@ -40,7 +40,7 @@
         <div class="panel-title-row">
           <div>
             <h2>Sessions</h2>
-            <p class="subtitle">{{ len .Playback }} active session(s)</p>
+            <p class="subtitle">{{ len .Playback }} active {{ if eq (len .Playback) 1 }}session{{ else }}sessions{{ end }}</p>
           </div>
         </div>
         {{ if .Playback }}
@@ -51,7 +51,7 @@
               <strong>{{ .Title }}</strong>
               <span class="meta-line">{{ .User }}{{ if .MediaType }} - {{ .MediaType }}{{ end }}</span>
             </div>
-            <span class="meta-line">{{ if .Client }}{{ .Client }}{{ end }}{{ if .DeviceName }} on {{ .DeviceName }}{{ end }}</span>
+            {{ if or .Client .DeviceName }}<span class="meta-line">{{ if .Client }}{{ .Client }}{{ end }}{{ if and .Client .DeviceName }} on {{ end }}{{ if .DeviceName }}{{ .DeviceName }}{{ end }}</span>{{ end }}
           </li>
           {{ end }}
         </ul>
@@ -60,7 +60,6 @@
         {{ end }}
       </section>
 
-      <div class="actions"><a class="btn secondary" href="/admin">Back</a></div>
     </section>
   </main>
 </body>

@@ -16,5 +16,16 @@ test("browser scripts avoid unsafe dynamic code and HTML sinks", async () => {
       assert.match(source, /document\.createElement\("fieldset"\)/);
       assert.equal((source.match(/document\.createElement\("label"\)/g) || []).length, 1, "season controls should only label each individual checkbox");
     }
+    if (file.endsWith("web/static/js/dashboard/queue_filter.js")) {
+      assert.match(source, /aria-pressed/);
+      assert.match(source, /queue-filter-empty/);
+    }
+    if (file.endsWith("web/static/js/dashboard/refresh.js")) {
+      assert.match(source, /active === document\.body/);
+      assert.match(source, /if \(!dashboardIsSafeToRefresh\(\)\)/);
+      assert.match(source, /refreshInFlight/);
+      assert.match(source, /data-dashboard-refresh/);
+      assert.doesNotMatch(source, /data-dashboard-container.*replaceNodeContent/);
+    }
   }
 });

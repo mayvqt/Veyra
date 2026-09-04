@@ -49,6 +49,7 @@
       image.src = poster;
       image.alt = (row.title || "Media") + " poster";
       image.loading = "lazy";
+      image.decoding = "async";
       image.addEventListener("error", function () {
         item.classList.remove("has-poster");
         image.remove();

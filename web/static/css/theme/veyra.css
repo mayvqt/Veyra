@@ -11,6 +11,7 @@
 
 /* 1. Design tokens */
 :root {
+  color-scheme: dark;
   --bg: #100d18;
   --surface: #191522;
   --surface-strong: #211b2d;
@@ -54,6 +55,8 @@ body {
     radial-gradient(circle at 52% 105%, rgba(235, 150, 193, 0.09), transparent 34rem),
     var(--bg);
   font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 a {
@@ -104,11 +107,12 @@ a {
 
 .nav-link,
 .btn {
-  min-height: 2.4rem;
+  min-height: 2.75rem;
   border-radius: 10px;
   font-size: 0.76rem;
   font-weight: 750;
   letter-spacing: 0.035em;
+  font-family: inherit;
 }
 
 .nav-link {
@@ -218,9 +222,16 @@ a {
 input,
 select,
 textarea {
+  font: inherit;
+  font-size: 0.9rem;
   border-color: var(--line);
   border-radius: 10px;
   background: rgba(8, 6, 12, 0.55);
+}
+
+input,
+select {
+  min-height: 2.75rem;
 }
 
 input:focus,
@@ -750,6 +761,15 @@ textarea:focus {
   }
 
   body:not(.auth-page) .topnav::-webkit-scrollbar { display: none; }
+
+  body:not(.auth-page) [aria-label="Admin navigation"] {
+    scrollbar-width: thin;
+  }
+
+  body:not(.auth-page) [aria-label="Admin navigation"]::-webkit-scrollbar {
+    display: block;
+    height: 4px;
+  }
 
   body:not(.auth-page) .nav-link { flex: 0 0 auto; }
 

@@ -11,9 +11,8 @@
     <section class="auth-card setup-container">
       <header class="section-head">
         <div>
-          <p class="eyebrow">First Run</p>
           <h1 class="page-title">Set up {{ .AppName }}</h1>
-          <p class="subtitle">Save service URLs and API keys securely before signing in.</p>
+          <p class="subtitle">Connect your services before signing in.</p>
         </div>
       </header>
 
@@ -35,14 +34,14 @@
             </div>
           </div>
           <div class="form-grid">
-            <label>App Base URL<input name="app_base_url" value="{{ .Setup.AppBaseURL }}" placeholder="https://veyra.home.test" required></label>
+            <label>App base URL<input name="app_base_url" type="url" inputmode="url" autocomplete="url" value="{{ .Setup.AppBaseURL }}" placeholder="https://veyra.home.test" required></label>
           </div>
         </section>
 
         <section class="panel setup-section">
           <div class="panel-title-row">
             <div>
-              <h2>Media Server</h2>
+              <h2>Media server</h2>
               <p class="subtitle">Choose Jellyfin or Emby for login, media, posters, stats, and active playback.</p>
             </div>
           </div>
@@ -53,45 +52,45 @@
                 <option value="emby" {{ if eq .Setup.MediaServerType "emby" }}selected{{ end }}>Emby</option>
               </select>
             </label>
-            <label>Internal URL<input name="media_server_url" value="{{ .Setup.MediaServerURL }}" placeholder="http://mediaserver:8096" required></label>
-            <label>Public URL<input name="media_server_public_url" value="{{ .Setup.MediaServerPublicURL }}" placeholder="https://media.home.test"></label>
-            <label>API Key<input type="password" name="media_server_api_key" value="{{ .Setup.MediaServerAPIKey }}" autocomplete="off"></label>
+            <label>Internal URL<input name="media_server_url" type="url" inputmode="url" autocomplete="url" value="{{ .Setup.MediaServerURL }}" placeholder="http://mediaserver:8096" required></label>
+            <label>Public URL<input name="media_server_public_url" type="url" inputmode="url" autocomplete="url" value="{{ .Setup.MediaServerPublicURL }}" placeholder="https://media.home.test"></label>
+            <label>API key<input type="password" name="media_server_api_key" value="{{ .Setup.MediaServerAPIKey }}" autocomplete="off"></label>
           </div>
         </section>
 
         <section class="panel setup-section">
           <div class="panel-title-row">
             <div>
-              <h2>Seerr</h2>
+              <h2>Request service (optional)</h2>
               <p class="subtitle">Optional request search, creation, quota, and request activity.</p>
             </div>
           </div>
           <div class="form-grid">
-            <label>Internal URL<input name="seerr_url" value="{{ .Setup.SeerrURL }}" placeholder="http://seerr:5055"></label>
-            <label>Public URL<input name="seerr_public_url" value="{{ .Setup.SeerrPublicURL }}" placeholder="https://requests.home.test"></label>
-            <label>API Key<input type="password" name="seerr_api_key" value="{{ .Setup.SeerrAPIKey }}" autocomplete="off"></label>
+            <label>Internal URL<input name="seerr_url" type="url" inputmode="url" autocomplete="url" value="{{ .Setup.SeerrURL }}" placeholder="http://seerr:5055"></label>
+            <label>Public URL<input name="seerr_public_url" type="url" inputmode="url" autocomplete="url" value="{{ .Setup.SeerrPublicURL }}" placeholder="https://requests.home.test"></label>
+            <label>API key<input type="password" name="seerr_api_key" value="{{ .Setup.SeerrAPIKey }}" autocomplete="off"></label>
           </div>
         </section>
 
         <section class="panel setup-section">
           <div class="panel-title-row">
             <div>
-              <h2>Arr Services</h2>
+              <h2>Automation services (optional)</h2>
               <p class="subtitle">Optional queue, calendar, indexer health, and storage warnings.</p>
             </div>
           </div>
           <div class="form-grid">
-            <label>Sonarr URL<input name="sonarr_url" value="{{ .Setup.SonarrURL }}" placeholder="http://sonarr:8989"></label>
-            <label>Sonarr API Key<input type="password" name="sonarr_api_key" value="{{ .Setup.SonarrAPIKey }}" autocomplete="off"></label>
-            <label>Radarr URL<input name="radarr_url" value="{{ .Setup.RadarrURL }}" placeholder="http://radarr:7878"></label>
-            <label>Radarr API Key<input type="password" name="radarr_api_key" value="{{ .Setup.RadarrAPIKey }}" autocomplete="off"></label>
-            <label>Prowlarr URL<input name="prowlarr_url" value="{{ .Setup.ProwlarrURL }}" placeholder="http://prowlarr:9696"></label>
-            <label>Prowlarr API Key<input type="password" name="prowlarr_api_key" value="{{ .Setup.ProwlarrAPIKey }}" autocomplete="off"></label>
+            <label>Sonarr URL<input name="sonarr_url" type="url" inputmode="url" autocomplete="url" value="{{ .Setup.SonarrURL }}" placeholder="http://sonarr:8989"></label>
+            <label>Sonarr API key<input type="password" name="sonarr_api_key" value="{{ .Setup.SonarrAPIKey }}" autocomplete="off"></label>
+            <label>Radarr URL<input name="radarr_url" type="url" inputmode="url" autocomplete="url" value="{{ .Setup.RadarrURL }}" placeholder="http://radarr:7878"></label>
+            <label>Radarr API key<input type="password" name="radarr_api_key" value="{{ .Setup.RadarrAPIKey }}" autocomplete="off"></label>
+            <label>Prowlarr URL<input name="prowlarr_url" type="url" inputmode="url" autocomplete="url" value="{{ .Setup.ProwlarrURL }}" placeholder="http://prowlarr:9696"></label>
+            <label>Prowlarr API key<input type="password" name="prowlarr_api_key" value="{{ .Setup.ProwlarrAPIKey }}" autocomplete="off"></label>
           </div>
         </section>
 
         <div class="actions">
-          <button class="btn" type="submit">Save And Restart</button>
+          <button class="btn" type="submit">Save and restart</button>
         </div>
       </form>
       {{ end }}

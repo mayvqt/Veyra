@@ -41,8 +41,7 @@
     <section class="container" data-dashboard-container>
       <header class="section-head">
         <div>
-          <h1 class="page-title">Welcome back, <span class="role-tag {{ if .User.IsAdmin }}role-admin{{ else }}role-user{{ end }}">{{ .User.DisplayName }}</span>.</h1>
-          <p class="hero-subtitle">Everything in one place.</p>
+          <h1 class="page-title">Welcome, {{ .User.DisplayName }}</h1>
         </div>
       </header>
       {{ if .DashboardMessage }}
@@ -59,8 +58,7 @@
       <section class="panel request-bot" data-seerr-request-bot>
         <div class="request-bot-head">
           <div>
-            <h2>Request Media</h2>
-            <p class="subtitle">Search for movies and shows.</p>
+            <h2>Request media</h2>
           </div>
         </div>
         <form class="request-bot-search" data-seerr-search-form>
@@ -77,11 +75,10 @@
       {{ end }}
 
       {{ if .SettingsShowQuota }}
-      <section class="panel quota-panel">
+      <section class="panel quota-panel" data-dashboard-refresh="quota">
         <div class="panel-title-row quota-title-row">
           <div>
-            <h2>Request Quota</h2>
-            <p class="subtitle">Your remaining requests.</p>
+            <h2>Request quota</h2>
           </div>
         </div>
         {{ if .QuotaMeters }}
@@ -114,7 +111,7 @@
       <div class="grid dashboard-grid">
 
         {{ if .SettingsShowCalendar }}
-        <section class="panel calendar-panel">
+        <section class="panel calendar-panel" data-dashboard-refresh="calendar">
           <div class="panel-title-row">
             <h2>Upcoming</h2>
             <div class="calendar-tools">
@@ -170,13 +167,13 @@
         {{ end }}
 
         {{ if .SettingsShowRecentMedia }}
-        <section class="panel recent-media-panel">
-          <h2>Recently Added</h2>
+        <section class="panel recent-media-panel" data-dashboard-refresh="recent-media">
+          <h2>Recently added</h2>
           {{ if .RecentlyAdded }}
           <ul class="media-grid recently-added-grid" id="recently-added-list">
             {{ range .RecentlyAdded }}
             <li class="media-card">
-              {{ if .ImageURL }}<img class="poster" src="{{ .ImageURL }}" alt="{{ .Title }} poster" loading="lazy">{{ else }}<div class="poster poster-empty">{{ .Type }}</div>{{ end }}
+              {{ if .ImageURL }}<img class="poster" src="{{ .ImageURL }}" alt="{{ .Title }} poster" loading="lazy" decoding="async">{{ else }}<div class="poster poster-empty">{{ .Type }}</div>{{ end }}
               <div class="media-content">
                 <strong>{{ .Title }}</strong>
                 <span class="meta-line">{{ .Type }}{{ if .Subtitle }} · {{ .Subtitle }}{{ else if .Year }} · {{ .Year }}{{ end }}</span>
@@ -189,18 +186,18 @@
           </ul>
           {{ else }}
           {{ if .RecentMediaUnavailable }}
-          <p class="subtitle">Recently added media is unavailable right now.</p>
+          <p class="subtitle empty-state">Recently added media is unavailable right now.</p>
           {{ else }}
-          <p class="subtitle">No recently added media yet.</p>
+          <p class="subtitle empty-state">No recently added media yet.</p>
           {{ end }}
           {{ end }}
         </section>
         {{ end }}
 
         {{ if .SettingsShowRecentReqs }}
-        <section class="panel recent-requests-panel">
+        <section class="panel recent-requests-panel" data-dashboard-refresh="recent-requests">
           <div class="panel-title-row request-section-head">
-            <h2>Recent Requests</h2>
+            <h2>Recent requests</h2>
             {{ if .RecentRequests }}<span class="pill request-count">{{ len .RecentRequests }}</span>{{ end }}
           </div>
           {{ if .RecentRequests }}
@@ -228,19 +225,19 @@
             {{ end }}
           </ul>
           {{ else }}
-          <p class="subtitle">Recent requests are unavailable right now.</p>
+          <p class="subtitle empty-state">Recent requests are unavailable right now.</p>
           {{ end }}
         </section>
         {{ end }}
 
         {{ if .SettingsShowQueue }}
-        <section class="panel queue-panel">
+        <section class="panel queue-panel" data-dashboard-refresh="queue">
           <div class="panel-title-row">
-            <h2>Download Queue</h2>
+            <h2>Download queue</h2>
             <div class="queue-filter" role="group" aria-label="Queue source filter">
-              <button type="button" class="btn secondary queue-filter-btn is-active" data-kind-filter="all">All</button>
-              <button type="button" class="btn secondary queue-filter-btn" data-kind-filter="movie">Movies</button>
-              <button type="button" class="btn secondary queue-filter-btn" data-kind-filter="tv">Shows</button>
+              <button type="button" class="btn secondary queue-filter-btn is-active" data-kind-filter="all" aria-pressed="true">All</button>
+              <button type="button" class="btn secondary queue-filter-btn" data-kind-filter="movie" aria-pressed="false">Movies</button>
+              <button type="button" class="btn secondary queue-filter-btn" data-kind-filter="tv" aria-pressed="false">Shows</button>
             </div>
           </div>
           {{ if .DownloadQueue }}
@@ -264,8 +261,9 @@
             </li>
             {{ end }}
           </ul>
+          <p class="subtitle queue-filter-empty" role="status" aria-live="polite" hidden>No downloads match this filter.</p>
           {{ else }}
-          <p class="subtitle">No active downloads in queue right now.</p>
+          <p class="subtitle empty-state">No active downloads in queue right now.</p>
           {{ end }}
         </section>
         {{ end }}

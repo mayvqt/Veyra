@@ -1,6 +1,7 @@
 (function (dashboard) {
   var refreshIntervalMs = 45000;
   var returnRefreshDelayMs = 250;
+  var refreshInFlight = false;
 
   function dashboardIsSafeToRefresh() {
     if (document.hidden) {
@@ -11,16 +12,17 @@
       return false;
     }
     var active = document.activeElement;
-    if (!active) {
-      return true;
-    }
-    return !active.matches("input, textarea, select, button");
+    return !active || active === document.body || active === document.documentElement;
   }
 
   function refreshDashboardContent() {
+    if (refreshInFlight) {
+      return;
+    }
     if (!dashboardIsSafeToRefresh()) {
       return;
     }
+    refreshInFlight = true;
     fetch(window.location.href, {
       headers: { "X-Requested-With": "fetch" },
       credentials: "same-origin",
@@ -36,14 +38,24 @@
       }
       var parser = new DOMParser();
       var doc = parser.parseFromString(html, "text/html");
-      var next = doc.querySelector("[data-dashboard-container]");
-      var current = document.querySelector("[data-dashboard-container]");
-      if (!next || !current) {
+      var currentWidgets = dashboard.queryAll("[data-dashboard-refresh]");
+      if (currentWidgets.length === 0) {
         return;
       }
-      dashboard.replaceNodeContent(current, next);
+      if (!dashboardIsSafeToRefresh()) {
+        return;
+      }
+      currentWidgets.forEach(function (current) {
+        var key = current.getAttribute("data-dashboard-refresh");
+        var next = doc.querySelector('[data-dashboard-refresh="' + key + '"]');
+        if (next) {
+          dashboard.replaceNodeContent(current, next);
+        }
+      });
       dashboard.initWidgets();
-    }).catch(function () {});
+    }).catch(function () {}).then(function () {
+      refreshInFlight = false;
+    });
   }
 
   dashboard.initAutoRefresh = function () {

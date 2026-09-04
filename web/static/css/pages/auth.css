@@ -132,6 +132,10 @@
 .setup-container {
   display: grid;
   gap: var(--space-4);
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
 }
 
 .setup-container .section-head {
@@ -160,5 +164,9 @@
   .login-panel {
     padding: 1.25rem 0 0;
     text-align: left;
+  }
+
+  .setup-container form > .actions .btn {
+    width: 100%;
   }
 }

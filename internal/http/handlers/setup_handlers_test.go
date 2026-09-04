@@ -24,7 +24,7 @@ func TestSetupGetRendersWhenRequired(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("want 200 got %d", w.Code)
 	}
-	if body := w.Body.String(); !strings.Contains(body, "Set up Veyra") || !strings.Contains(body, "Prowlarr API Key") {
+	if body := w.Body.String(); !strings.Contains(body, "Set up Veyra") || !strings.Contains(body, "Prowlarr API key") {
 		t.Fatalf("expected setup form, got %s", body)
 	}
 }

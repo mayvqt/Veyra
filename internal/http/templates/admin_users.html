@@ -11,7 +11,7 @@
     <div class="topbar">
       <div class="brand">{{ .AppName }}</div>
       <div class="topbar-right">
-        <nav class="topnav">
+        <nav class="topnav" aria-label="Admin navigation">
           <a class="nav-link" href="/dashboard">Dashboard</a>
           <a class="nav-link" href="/admin">Overview</a>
           <a class="nav-link" href="/admin/settings">Settings</a>
@@ -37,7 +37,7 @@
       </header>
 
       <section class="panel">
-        <h2>User Summary</h2>
+        <h2>User summary</h2>
         <div class="meta-grid admin-summary-grid">
           <div class="meta-item"><span class="meta-label">Total Users</span><strong>{{ .TotalUsers }}</strong></div>
           <div class="meta-item"><span class="meta-label">Admins</span><strong>{{ .AdminUsers }}</strong></div>
@@ -46,7 +46,7 @@
       </section>
 
       <section class="panel users-panel">
-        <h2>Users</h2>
+        <h2>All users</h2>
         {{ if .Users }}
         <ul class="stack user-list">
           {{ range .Users }}
@@ -74,7 +74,6 @@
         {{ end }}
       </section>
 
-      <div class="actions"><a class="btn secondary" href="/admin">Back</a></div>
     </section>
   </main>
 </body>

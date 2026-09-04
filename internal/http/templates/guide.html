@@ -6,7 +6,7 @@
   <title>{{ .AppName }} - Guide</title>
   {{ template "styles" . }}
 </head>
-<body>
+<body class="guide-page">
   <main class="app-shell">
     <div class="topbar">
       <div class="brand">{{ .AppName }}</div>
@@ -26,7 +26,6 @@
     <section class="container">
       <header class="section-head">
         <div>
-          <p class="eyebrow">Guide</p>
           <h1 class="page-title">Watch and request media</h1>
         </div>
         <p class="subtitle">Follow these steps to watch on your devices and request movies or shows.</p>
@@ -34,7 +33,7 @@
 
       <div class="grid">
         <section class="panel half">
-          <h2>Watch in your browser</h2>
+          <h2>Watch in a browser</h2>
           <p class="subtitle">Click the button below, then sign in with your {{ .MediaServerName }} username and password.</p>
           <div class="actions">
             <a class="btn" href="{{ .MediaServerPublicURL }}">Open {{ .MediaServerName }}</a>
@@ -42,7 +41,7 @@
         </section>
 
         <section class="panel half">
-          <h2>Request movies and shows</h2>
+          <h2>Request a movie or show</h2>
           <p class="subtitle">Use Seerr to request something new to watch. Search for a movie or TV show, then press Request.</p>
           <div class="actions">
             <a class="btn" href="{{ .SeerrPublicURL }}">Open Seerr</a>
@@ -50,7 +49,7 @@
         </section>
 
         <section class="panel">
-          <h2>Set Up {{ .MediaServerName }} On TV Or Mobile App</h2>
+          <h2>Set up the {{ .MediaServerName }} app</h2>
           <ul class="stack">
             <li class="stack-item">
               <strong>1. Install the {{ .MediaServerName }} app</strong>
@@ -76,7 +75,7 @@
         </section>
 
         <section class="panel">
-          <h2>After You Request A Movie Or Show</h2>
+          <h2>After you make a request</h2>
           <ul class="stack">
             <li class="stack-item"><strong>1.</strong> Open Seerr and request a movie or show.</li>
             <li class="stack-item"><strong>2.</strong> The request is processed in the background.</li>

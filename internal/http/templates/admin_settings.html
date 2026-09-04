@@ -11,7 +11,7 @@
     <div class="topbar">
       <div class="brand">{{ .AppName }}</div>
       <div class="topbar-right">
-        <nav class="topnav">
+        <nav class="topnav" aria-label="Admin navigation">
           <a class="nav-link" href="/dashboard">Dashboard</a>
           <a class="nav-link" href="/admin">Overview</a>
           <a class="nav-link active" href="/admin/settings" aria-current="page">Settings</a>
@@ -35,8 +35,8 @@
         </div>
         <p class="subtitle">Manage branding, public links, and dashboard widget defaults.</p>
       </header>
-      {{ if .Success }}<p class="success">{{ .Success }}</p>{{ end }}
-      {{ if .Error }}<p class="error">{{ .Error }}</p>{{ end }}
+      {{ if .Success }}<p class="success" role="status" aria-live="polite">{{ .Success }}</p>{{ end }}
+      {{ if .Error }}<p class="error" role="alert">{{ .Error }}</p>{{ end }}
 
       <form method="post" action="/admin/settings" class="form">
         <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
@@ -48,13 +48,13 @@
                 <p class="subtitle">Default widgets and the admin notice.</p>
               </div>
             </div>
-            <label>Dashboard Message<textarea name="dashboard_message" rows="3" maxlength="280" placeholder="Service updates, outage notes, announcements...">{{ .DashboardMessage }}</textarea></label>
+            <label>Dashboard message<textarea name="dashboard_message" rows="3" maxlength="280" aria-describedby="dashboard-message-help" placeholder="Service updates, outage notes, announcements...">{{ .DashboardMessage }}</textarea><span id="dashboard-message-help" class="field-help">Optional message shown to users.</span></label>
           </section>
 
           <section class="panel half settings-panel" id="settings-widgets">
             <div class="panel-title-row">
               <div>
-                <h2>Dashboard Widgets</h2>
+                <h2>Dashboard widgets</h2>
                 <p class="subtitle">Choose what appears on the main dashboard.</p>
               </div>
             </div>
@@ -76,22 +76,22 @@
               </div>
             </div>
             <div class="form-grid">
-              <label>App Name<input name="app_name" value="{{ .BrandAppName }}"></label>
-              <label>Logo URL<input name="logo_url" value="{{ .BrandLogoURL }}"></label>
-              <label>Accent Color<input name="accent_color" value="{{ .BrandAccent }}"></label>
+              <label>App name<input name="app_name" value="{{ .BrandAppName }}" required maxlength="60"></label>
+              <label>Logo URL<input name="logo_url" type="url" inputmode="url" value="{{ .BrandLogoURL }}"></label>
+              <label>Accent color<input name="accent_color" value="{{ .BrandAccent }}" required maxlength="7" pattern="#[0-9a-fA-F]{6}" placeholder="#8b6bd3" title="Use a six-digit hex color, for example #8b6bd3"></label>
             </div>
           </section>
 
           <section class="panel half settings-panel" id="settings-links">
             <div class="panel-title-row">
               <div>
-                <h2>Dashboard Links</h2>
+                <h2>Dashboard links</h2>
                 <p class="subtitle">Public destinations used by dashboard buttons.</p>
               </div>
             </div>
             <div class="form-grid">
-              <label>{{ .MediaServerName }} Public URL<input name="media_server_public_url" value="{{ .SettingsMediaServerPublic }}"></label>
-              <label>Seerr Public URL<input name="seerr_public_url" value="{{ .SettingsSeerrPublic }}"></label>
+              <label>{{ .MediaServerName }} public URL<input name="media_server_public_url" type="url" inputmode="url" value="{{ .SettingsMediaServerPublic }}" required></label>
+              <label>Seerr public URL<input name="seerr_public_url" type="url" inputmode="url" value="{{ .SettingsSeerrPublic }}" required></label>
             </div>
           </section>
 
@@ -99,7 +99,7 @@
           <section class="panel settings-panel" id="settings-connections">
             <div class="panel-title-row">
               <div>
-                <h2>Service Settings</h2>
+                <h2>Service settings</h2>
                 <p class="subtitle">Setup-wizard service URLs and API keys. Environment-managed values are read-only.</p>
               </div>
             </div>
@@ -125,6 +125,7 @@
                     {{ else }}
                     <input name="{{ .Name }}" value="{{ .Value }}" {{ if .EnvManaged }}disabled{{ end }} placeholder="{{ if .EnvManaged }}Managed by environment variable{{ end }}">
                     {{ end }}
+                    {{ if .EnvManaged }}<span class="env-managed-label">Managed by environment</span>{{ end }}
                   </label>
                   {{ end }}
                 </div>
@@ -135,9 +136,9 @@
           {{ end }}
         </div>
 
-        <div class="actions">
-          <button class="btn" type="submit">Save Settings</button>
-          <a class="btn secondary" href="/admin">Back</a>
+        <div class="actions settings-actions">
+          <button class="btn" type="submit">Save settings</button>
+          <a class="btn secondary" href="/admin">Cancel</a>
         </div>
       </form>
     </section>

@@ -11,7 +11,7 @@
     <div class="topbar">
       <div class="brand">{{ .AppName }}</div>
       <div class="topbar-right">
-        <nav class="topnav">
+        <nav class="topnav" aria-label="Admin navigation">
           <a class="nav-link" href="/dashboard">Dashboard</a>
           <a class="nav-link" href="/admin">Overview</a>
           <a class="nav-link" href="/admin/settings">Settings</a>
@@ -64,7 +64,6 @@
       <p class="subtitle">No audit logs yet.</p>
       {{ end }}
 
-      <div class="actions"><a class="btn secondary" href="/admin">Back</a></div>
     </section>
   </main>
 </body>

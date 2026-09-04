@@ -23,7 +23,7 @@ func TestAdminOverviewRendersRecentLogs(t *testing.T) {
 		t.Fatalf("want 200 got %d", w.Code)
 	}
 	body := w.Body.String()
-	if !strings.Contains(body, "Recent Activity") || !strings.Contains(body, "Service health check failed") {
+	if !strings.Contains(body, "Recent activity") || !strings.Contains(body, "Service health check failed") {
 		t.Fatal("expected recent activity section with inserted log")
 	}
 }
@@ -40,7 +40,7 @@ func TestAdminOverviewRendersActionCenter(t *testing.T) {
 		t.Fatalf("want 200 got %d", w.Code)
 	}
 	body := w.Body.String()
-	for _, want := range []string{"Action Center", "Service Health", "Connectors Ready", "Configuration Posture", "Review", "Standard Users"} {
+	for _, want := range []string{"Action center", "Service Health", "Connectors Ready", "Configuration posture", "Review", "Standard Users"} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("expected overview to contain %q", want)
 		}
@@ -64,7 +64,7 @@ func TestAdminUsersRendersSummaryAndEmptyState(t *testing.T) {
 		t.Fatalf("want 200 got %d", w.Code)
 	}
 	body := w.Body.String()
-	for _, want := range []string{"User Summary", "Standard Users", `class="panel users-panel"`, "No Jellyfin users have signed in yet."} {
+	for _, want := range []string{"User summary", "Standard Users", `class="panel users-panel"`, "No Jellyfin users have signed in yet."} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("expected users page to contain %q", want)
 		}

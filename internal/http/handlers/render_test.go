@@ -42,8 +42,8 @@ func TestDashboardTemplateLabelsRequestPanel(t *testing.T) {
 		t.Fatalf("want 200 got %d", w.Code)
 	}
 	body := w.Body.String()
-	if !strings.Contains(body, ">Request Media<") {
-		t.Fatal("expected dashboard request panel to be labeled Request Media")
+	if !strings.Contains(body, ">Request media<") {
+		t.Fatal("expected dashboard request panel to be labeled Request media")
 	}
 	if strings.Contains(body, "Request Bot") {
 		t.Fatal("dashboard should not use old Request Bot label")
@@ -59,6 +59,34 @@ func TestDashboardTemplateLabelsRequestPanel(t *testing.T) {
 	}
 	if strings.Contains(body, "Services connected") {
 		t.Fatal("dashboard should not claim all services are connected unconditionally")
+	}
+}
+
+func TestDashboardTemplateMarksRefreshableWidgets(t *testing.T) {
+	h, db := mkHandlers(t)
+	defer db.Close()
+
+	w := httptest.NewRecorder()
+	h.render(w, "dashboard.html", ViewData{
+		AppName:                 "Veyra",
+		SettingsShowRequestBot:  true,
+		SettingsShowQuota:       true,
+		SettingsShowCalendar:    true,
+		SettingsShowRecentMedia: true,
+		SettingsShowRecentReqs:  true,
+		SettingsShowQueue:       true,
+	})
+	if w.Code != http.StatusOK {
+		t.Fatalf("want 200 got %d", w.Code)
+	}
+	body := w.Body.String()
+	for _, key := range []string{"quota", "calendar", "recent-media", "recent-requests", "queue"} {
+		if strings.Count(body, `data-dashboard-refresh="`+key+`"`) != 1 {
+			t.Fatalf("expected one refresh marker for %q", key)
+		}
+	}
+	if strings.Contains(body, `data-dashboard-refresh="request-bot"`) || strings.Contains(body, `data-dashboard-refresh="container"`) {
+		t.Fatal("request bot and dashboard container must not be refresh widgets")
 	}
 }
 

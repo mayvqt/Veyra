@@ -11,7 +11,7 @@
     <div class="topbar">
       <div class="brand">{{ .AppName }}</div>
       <div class="topbar-right">
-        <nav class="topnav">
+        <nav class="topnav" aria-label="Admin navigation">
           <a class="nav-link" href="/dashboard">Dashboard</a>
           <a class="nav-link active" href="/admin" aria-current="page">Overview</a>
           <a class="nav-link" href="/admin/settings">Settings</a>
@@ -63,7 +63,7 @@
         <section class="panel admin-action-panel">
           <div class="panel-title-row">
             <div>
-              <h2>Action Center</h2>
+              <h2>Action center</h2>
               <p class="subtitle">Highest-value checks and the fastest route to resolve them.</p>
             </div>
           </div>
@@ -74,7 +74,7 @@
                 <strong>{{ .Title }}</strong>
                 <span class="meta-line">{{ .Detail }}</span>
               </div>
-              <a class="btn secondary" href="{{ .Href }}">Review</a>
+              {{ if ne .Severity "ok" }}<a class="btn secondary" href="{{ .Href }}">Review {{ .Title }}</a>{{ end }}
             </li>
             {{ end }}
           </ul>
@@ -95,7 +95,7 @@
           <section class="panel">
             <div class="panel-title-row">
               <div>
-                <h2>Configuration Posture</h2>
+                <h2>Configuration posture</h2>
                 <p class="subtitle">{{ .AdminOverviewSummary.ConfigurationStatus }}</p>
               </div>
               <a class="btn secondary" href="/admin/settings">Settings</a>
@@ -114,7 +114,7 @@
 
         <div class="admin-column admin-status-column">
           <section class="panel service-status-panel">
-            <h2>Service Status</h2>
+            <h2>Service status</h2>
             <div class="service-status-list">
               {{ range .AdminStatusRows }}
               <div class="service-status-row">
@@ -131,7 +131,7 @@
 
         <section class="panel">
           <div class="panel-title-row">
-            <h2>Recent Activity</h2>
+            <h2>Recent activity</h2>
             <a class="btn secondary" href="/admin/logs">View all logs</a>
           </div>
           {{ if .AuditLogs }}

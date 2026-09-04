@@ -63,7 +63,7 @@
 
 .integrations-board {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: var(--space-3);
 }
 
@@ -72,9 +72,9 @@
   align-content: start;
   gap: var(--space-3);
   overflow: hidden;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(165, 180, 194, 0.16);
   border-radius: var(--radius-sm);
-  background: rgba(9, 15, 21, 0.42);
+  background: rgba(9, 15, 21, 0.3);
   padding: var(--space-3) var(--space-3) var(--space-3) calc(var(--space-3) + 0.22rem);
 }
 
@@ -100,32 +100,22 @@
   min-width: 0;
 }
 
-.integration-title h2 {
+.integration-title h2,
+.integration-title h3 {
   margin: 0;
   font-size: 1rem;
 }
 
 .integration-snapshot {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0;
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.65rem 1rem;
   margin: 0;
 }
 
 .integration-snapshot div {
   min-width: 0;
-  padding: 0.56rem 0;
-}
-
-.integration-snapshot div:not(:last-child) {
-  padding-right: 0.55rem;
-}
-
-.integration-snapshot div + div {
-  border-left: 1px solid var(--line);
-  padding-left: 0.55rem;
+  padding: 0.2rem 0;
 }
 
 .integration-stat-strip div {
@@ -205,6 +195,23 @@
   color: var(--accent-strong);
   font-size: 0.76rem;
   font-weight: 800;
+}
+
+.settings-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  margin-inline: -0.5rem;
+  padding: 0.5rem;
+  border-top: 1px solid var(--line);
+  background: rgba(12, 18, 25, 0.92);
+  backdrop-filter: blur(10px);
+}
+
+.env-managed-label {
+  color: var(--faint);
+  font-size: 0.7rem;
+  font-weight: 700;
 }
 
 .integration-detail {
@@ -454,12 +461,6 @@
   .audit-details,
   .action-item {
     grid-template-columns: 1fr;
-  }
-
-  .integration-snapshot div + div {
-    border-left: 0;
-    padding-left: 0;
-    border-top: 1px solid var(--line);
   }
 
   .integration-card-footer,
