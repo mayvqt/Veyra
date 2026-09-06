@@ -18,7 +18,7 @@ bash scripts/test-build-local.sh
 git diff --check
 ```
 
-Follow [AGENTS.md](../AGENTS.md). Never commit `.env`, databases, logs, build output, credentials, tokens, or encryption keys.
+Never commit `.env`, databases, logs, build output, credentials, tokens, or encryption keys.
 
 ## Isolated validation
 
