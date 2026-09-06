@@ -494,15 +494,8 @@ func (h *Handlers) resolveSeerrUser(r *http.Request, u auth.User) seerr.UserIden
 			return *resolved
 		}
 	}
-	fallbackCacheKey := "seerr:user:name:" + strings.ToLower(u.Username)
-	if cacheGetJSON(r.Context(), h.db, fallbackCacheKey, &cached) && cached.ID > 0 {
-		return cached
-	}
-	resolved, err := h.seerr.ResolveUser(r.Context(), u.Username, u.DisplayName)
-	if err == nil && resolved != nil && resolved.ID > 0 {
-		h.cacheSetJSON(r.Context(), fallbackCacheKey, *resolved, cacheTTLResolvedUser)
-		return *resolved
-	}
+	// Names and email local parts are mutable and can belong to another user.
+	// Only the media-server link may authorize access to a Seerr identity.
 	return seerr.UserIdentity{Username: u.Username, DisplayName: u.DisplayName}
 }
 

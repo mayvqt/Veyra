@@ -1,7 +1,7 @@
 # Integrations
 
 - Jellyfin or Emby supplies identity and administrator policy. The API key enables recently added media, posters, playback, and admin data.
-- Seerr supplies search, requests, quota, and request history. Link users to their media-server identity.
+- Seerr supplies search, requests, quota, and request history. Link users to their media-server identity. Matching usernames, display names, or email addresses do not grant access to a Seerr account; unlinked users cannot submit requests through Veyra.
 - Sonarr and Radarr supply queue, calendar, health, and storage data.
 - Prowlarr supplies indexer and admin health data.
 
