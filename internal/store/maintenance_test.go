@@ -4,8 +4,36 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 )
+
+func TestConcurrentBackupsNeverOverwriteDestination(t *testing.T) {
+	db := testDB(t)
+	defer db.Close()
+	destination := filepath.Join(t.TempDir(), "backup.db")
+	start := make(chan struct{})
+	results := make(chan error, 8)
+	var workers sync.WaitGroup
+	for range cap(results) {
+		workers.Go(func() {
+			<-start
+			results <- BackupSQLite(context.Background(), db, destination)
+		})
+	}
+	close(start)
+	workers.Wait()
+	close(results)
+	succeeded := 0
+	for err := range results {
+		if err == nil {
+			succeeded++
+		}
+	}
+	if succeeded != 1 {
+		t.Fatalf("expected exactly one published backup, got %d", succeeded)
+	}
+}
 
 func TestSQLiteMaintenanceAndBackup(t *testing.T) {
 	db := testDB(t)
