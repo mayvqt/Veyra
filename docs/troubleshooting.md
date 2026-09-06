@@ -17,3 +17,8 @@ Redact secrets, tokens, cookies, private URLs, and response bodies before sharin
 ## Setup returns after saving
 
 Nonempty environment values override saved wizard values. If you copied an older `.env.example`, remove the sample integration URLs and `change-me` keys from `.env`, leaving those variables empty, then recreate the container with `docker compose up -d`. A restart alone does not reload the container environment. Complete setup again if needed. Keep intentional environment overrides and your existing session and encryption secrets.
+
+If setup reports that it is already complete, restore valid environment configuration
+and recreate the container, then use authenticated admin settings. Established
+installations cannot reopen unauthenticated setup; do not delete the database to
+bypass this protection.

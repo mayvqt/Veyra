@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"os"
 	"strings"
 	"testing"
@@ -10,6 +11,97 @@ import (
 	"github.com/mayvqt/veyra/internal/security"
 	"github.com/mayvqt/veyra/internal/store"
 )
+
+func TestSaveInitialSetupRejectsExistingState(t *testing.T) {
+	for _, state := range []string{"empty stored setting", "existing user", "read error"} {
+		t.Run(state, func(t *testing.T) {
+			ctx := context.Background()
+			db, err := store.OpenSQLite(t.TempDir() + "/veyra.db")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer db.Close()
+			if err := store.InitSchema(ctx, db); err != nil {
+				t.Fatal(err)
+			}
+			switch state {
+			case "empty stored setting":
+				err = store.UpsertSetting(ctx, db, settingMediaServerURL, "")
+			case "existing user":
+				_, err = store.UpsertUserByMediaServerID(ctx, db, store.UserRow{MediaServerUserID: "user", Username: "user"})
+			case "read error":
+				_, err = db.ExecContext(ctx, "DROP TABLE settings")
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = SaveInitialSetup(ctx, db, security.NewCrypto("12345678901234567890123456789012"), SetupInput{MediaServerType: "jellyfin", MediaServerURL: "http://replacement.invalid"})
+			if err == nil || (state != "read error" && !errors.Is(err, ErrSetupAlreadyComplete)) {
+				t.Fatalf("initial setup accepted existing or unreadable state: %v", err)
+			}
+			if state != "read error" {
+				value, err := store.GetSetting(ctx, db, settingMediaServerURL)
+				if err != nil || value != "" {
+					t.Fatalf("rejected setup wrote settings: err=%v", err)
+				}
+			}
+		})
+	}
+}
+
+func TestSaveInitialSetupConcurrentClaimsOnlyOnce(t *testing.T) {
+	ctx := context.Background()
+	path := t.TempDir() + "/veyra.db"
+	dbs := make([]*sql.DB, 2)
+	for i := range dbs {
+		db, err := store.OpenSQLite(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer db.Close()
+		dbs[i] = db
+	}
+	if err := store.InitSchema(ctx, dbs[0]); err != nil {
+		t.Fatal(err)
+	}
+	crypto := security.NewCrypto("12345678901234567890123456789012")
+	inputs := []SetupInput{
+		{MediaServerType: "jellyfin", MediaServerURL: "http://first.invalid", MediaServerAPIKey: "first-key"},
+		{MediaServerType: "emby", MediaServerURL: "http://second.invalid", MediaServerAPIKey: "second-key"},
+	}
+	start := make(chan struct{})
+	results := make(chan int, 2)
+	for i := range inputs {
+		go func(i int) {
+			<-start
+			if err := SaveInitialSetup(ctx, dbs[i], crypto, inputs[i]); err != nil {
+				results <- -1
+				return
+			}
+			results <- i
+		}(i)
+	}
+	close(start)
+	winner := -1
+	for range inputs {
+		if result := <-results; result >= 0 {
+			if winner >= 0 {
+				t.Fatal("both initial setup requests succeeded")
+			}
+			winner = result
+		}
+	}
+	if winner < 0 {
+		t.Fatal("neither initial setup request succeeded")
+	}
+	stored, _, err := StoredSetup(ctx, dbs[0], crypto)
+	if err != nil || stored != inputs[winner] {
+		t.Fatalf("initial setup did not persist one complete request: err=%v", err)
+	}
+	if err := SaveInitialSetup(ctx, dbs[1], crypto, inputs[1-winner]); !errors.Is(err, ErrSetupAlreadyComplete) {
+		t.Fatalf("later request could replace initial setup: %v", err)
+	}
+}
 
 func TestExampleEnvironmentAllowsWizardSetupAfterRestart(t *testing.T) {
 	content, err := os.ReadFile("../../.env.example")
