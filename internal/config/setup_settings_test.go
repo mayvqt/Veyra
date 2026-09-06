@@ -3,11 +3,60 @@ package config
 import (
 	"context"
 	"database/sql"
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/mayvqt/veyra/internal/security"
 	"github.com/mayvqt/veyra/internal/store"
 )
+
+func TestExampleEnvironmentAllowsWizardSetupAfterRestart(t *testing.T) {
+	content, err := os.ReadFile("../../.env.example")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, line := range strings.Split(string(content), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		key, value, ok := strings.Cut(line, "=")
+		if !ok {
+			t.Fatal("invalid example environment assignment")
+		}
+		t.Setenv(key, value)
+	}
+	t.Setenv("SESSION_SECRET", "synthetic-session-secret-for-bootstrap-test")
+	t.Setenv("ENCRYPTION_KEY", "12345678901234567890123456789012")
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !SetupRequired(cfg) {
+		t.Fatal("fresh example environment must open the wizard")
+	}
+	db, err := store.OpenSQLite(t.TempDir() + "/veyra.db")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	ctx := context.Background()
+	if err := store.InitSchema(ctx, db); err != nil {
+		t.Fatal(err)
+	}
+	in := SetupInput{AppBaseURL: "https://portal.example.test", MediaServerType: "emby", MediaServerURL: "http://emby:8096"}
+	if err := SaveSetup(ctx, db, security.NewCrypto(cfg.EncryptionKey), in); err != nil {
+		t.Fatal(err)
+	}
+	reloaded, err := ApplyStoredSetup(ctx, db, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if SetupRequired(reloaded) || reloaded.MediaServerType != MediaServerEmby || reloaded.MediaServerURL != in.MediaServerURL || reloaded.AppBaseURL != in.AppBaseURL {
+		t.Fatal("example environment overrides completed wizard settings")
+	}
+}
 
 func TestSetupRequiredAllowsEmptyOptionalKeys(t *testing.T) {
 	cfg := Config{
