@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/mayvqt/veyra/internal/config"
+	"github.com/mayvqt/veyra/internal/security"
 	"github.com/mayvqt/veyra/internal/store"
 )
 
@@ -138,6 +139,61 @@ func TestSetupPostStoresEncryptedSettingsAndRestarts(t *testing.T) {
 	}
 	if loaded.MediaServerAPIKey != "jf-secret" || loaded.ProwlarrAPIKey != "prowlarr-secret" {
 		t.Fatalf("stored setup did not apply: %+v", loaded)
+	}
+	form.Set("media_server_url", "http://replacement.invalid")
+	w = httptest.NewRecorder()
+	r = httptest.NewRequest(http.MethodPost, "/setup", strings.NewReader(form.Encode()))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r.AddCookie(&http.Cookie{Name: "veyra_csrf", Value: "token"})
+	h.SetupPost(w, r)
+	if w.Code != http.StatusConflict {
+		t.Fatalf("second setup POST before restart must fail: got %d", w.Code)
+	}
+	loaded, err = config.ApplyStoredSetup(context.Background(), db, h.cfg)
+	if err != nil || loaded.MediaServerURL != "http://mediaserver:8096" {
+		t.Fatalf("second setup POST replaced initial settings: err=%v", err)
+	}
+}
+
+func TestSetupCannotReopenEstablishedInstallation(t *testing.T) {
+	for _, state := range []string{"stored setup", "existing user", "database error"} {
+		t.Run(state, func(t *testing.T) {
+			h, db := mkHandlers(t)
+			defer db.Close()
+			ctx := context.Background()
+			wantStatus := http.StatusConflict
+			switch state {
+			case "stored setup":
+				if err := config.SaveSetup(ctx, db, security.NewCrypto(h.cfg.EncryptionKey), config.SetupInput{MediaServerType: "jellyfin", MediaServerURL: "http://original.invalid"}); err != nil {
+					t.Fatal(err)
+				}
+			case "existing user":
+				if _, err := store.UpsertUserByMediaServerID(ctx, db, store.UserRow{MediaServerUserID: "existing-user", Username: "user"}); err != nil {
+					t.Fatal(err)
+				}
+			case "database error":
+				if err := db.Close(); err != nil {
+					t.Fatal(err)
+				}
+				wantStatus = http.StatusInternalServerError
+			}
+			// An optional connector missing its key must not reopen public setup.
+			h.cfg.SeerrAPIKey = ""
+			for _, method := range []string{http.MethodGet, http.MethodPost} {
+				w := httptest.NewRecorder()
+				r := httptest.NewRequest(method, "/setup", strings.NewReader("csrf_token=token&app_base_url=http://portal.invalid&media_server_type=jellyfin&media_server_url=http://replacement.invalid"))
+				r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+				r.AddCookie(&http.Cookie{Name: "veyra_csrf", Value: "token"})
+				if method == http.MethodGet {
+					h.SetupGet(w, r)
+				} else {
+					h.SetupPost(w, r)
+				}
+				if w.Code != wantStatus {
+					t.Fatalf("%s setup returned %d, want %d", method, w.Code, wantStatus)
+				}
+			}
+		})
 	}
 }
 

@@ -5,9 +5,11 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"sync"
 	"time"
 
+	"github.com/mayvqt/veyra/internal/integrations"
 	"github.com/mayvqt/veyra/internal/security"
 	"github.com/mayvqt/veyra/internal/store"
 )
@@ -112,6 +114,13 @@ func (s *Service) ResolveSession(ctx context.Context, rawID string) (Session, Us
 			checkErr = decErr
 		} else {
 			checkErr = fmt.Errorf("media server token is empty")
+		}
+		if integrations.IsHTTPStatus(checkErr, http.StatusUnauthorized) || integrations.IsHTTPStatus(checkErr, http.StatusForbidden) {
+			// A rejected upstream token also revokes member access to routes that
+			// use service API keys rather than the user's media server token.
+			s.clearAdminRetry(sess.IDHash)
+			s.warnPersistence("delete revoked session", store.DeleteSession(ctx, s.db, sess.IDHash))
+			return Session{}, User{}, fmt.Errorf("media server session rejected: %w", checkErr)
 		}
 		// Deny this session without turning a temporary upstream failure into a
 		// durable permission change. A confirmed non-admin response is persisted

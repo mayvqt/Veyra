@@ -6,6 +6,15 @@ Include affected versions, impact, reproduction, and mitigation without credenti
 
 Security fixes target `main` until stable release branches exist.
 
+## Access boundaries
+
+Complete first-run setup on a trusted network before public exposure. Media-server
+administrator policy controls Veyra admin access. Session policy is refreshed on
+requests after 15 minutes; a definitive upstream 401/403 revokes the Veyra session.
+During temporary upstream failures, administrator access is denied, while member
+sessions retain their existing expiry. Seerr access requires an explicit
+media-server user link; matching account names are not proof of identity.
+
 ## Secret handling
 
 - API keys and media-server access tokens are sent in request headers, never URL query parameters.

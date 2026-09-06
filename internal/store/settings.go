@@ -13,6 +13,17 @@ type SettingRow struct {
 	Value string
 }
 
+// HasSetupState reports whether public first-run setup has already been used or
+// an environment-configured installation has authenticated a user. The query
+// accepts a transaction so initial setup can check and save atomically.
+func HasSetupState(ctx context.Context, db interface {
+	QueryRowContext(context.Context, string, ...any) *sql.Row
+}) (bool, error) {
+	var exists bool
+	err := db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM settings WHERE key LIKE 'setup.%') OR EXISTS(SELECT 1 FROM users)`).Scan(&exists)
+	return exists, err
+}
+
 func UpsertSetting(ctx context.Context, db *sql.DB, key, value string) error {
 	_, err := db.ExecContext(ctx, `
 INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)

@@ -3,7 +3,8 @@ WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=1 GOOS=linux go build -trimpath -ldflags="-s -w" -o /bin/veyra ./cmd/server
+ARG VERSION=dev
+RUN CGO_ENABLED=1 GOOS=linux go build -trimpath -ldflags="-s -w -X github.com/mayvqt/veyra/internal/buildinfo.Version=${VERSION}" -o /bin/veyra ./cmd/server
 
 FROM debian:bookworm-slim
 

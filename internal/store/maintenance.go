@@ -86,7 +86,9 @@ func BackupSQLite(ctx context.Context, db *sql.DB, destination string) error {
 	if err := os.Chmod(tempPath, 0o600); err != nil {
 		return fmt.Errorf("restrict backup permissions: %w", err)
 	}
-	if err := os.Rename(tempPath, destination); err != nil {
+	// Linking within the destination directory atomically refuses an existing
+	// name, including one created by another backup after the initial check.
+	if err := os.Link(tempPath, destination); err != nil {
 		return fmt.Errorf("publish SQLite backup: %w", err)
 	}
 	return nil

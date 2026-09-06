@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -8,11 +9,11 @@ import (
 	"github.com/mayvqt/veyra/internal/config"
 	"github.com/mayvqt/veyra/internal/http/middleware"
 	"github.com/mayvqt/veyra/internal/security"
+	"github.com/mayvqt/veyra/internal/store"
 )
 
 func (h *Handlers) SetupGet(w http.ResponseWriter, r *http.Request) {
-	if !config.SetupRequired(h.cfg) {
-		http.Redirect(w, r, "/login", http.StatusFound)
+	if !h.allowInitialSetup(w, r) {
 		return
 	}
 	h.render(w, "setup.html", ViewData{
@@ -25,8 +26,7 @@ func (h *Handlers) SetupGet(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) SetupPost(w http.ResponseWriter, r *http.Request) {
-	if !config.SetupRequired(h.cfg) {
-		http.Redirect(w, r, "/login", http.StatusFound)
+	if !h.allowInitialSetup(w, r) {
 		return
 	}
 	if !middleware.ValidateCSRF(r) {
@@ -49,7 +49,11 @@ func (h *Handlers) SetupPost(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	if err := config.SaveSetup(r.Context(), h.db, security.NewCrypto(h.cfg.EncryptionKey), in); err != nil {
+	if err := config.SaveInitialSetup(r.Context(), h.db, security.NewCrypto(h.cfg.EncryptionKey), in); err != nil {
+		if errors.Is(err, config.ErrSetupAlreadyComplete) {
+			http.Error(w, "initial setup is already complete", http.StatusConflict)
+			return
+		}
 		http.Error(w, "failed to save setup", http.StatusInternalServerError)
 		return
 	}
@@ -63,6 +67,23 @@ func (h *Handlers) SetupPost(w http.ResponseWriter, r *http.Request) {
 	if h.restart != nil {
 		go h.restart()
 	}
+}
+
+func (h *Handlers) allowInitialSetup(w http.ResponseWriter, r *http.Request) bool {
+	if !config.SetupRequired(h.cfg) {
+		http.Redirect(w, r, "/login", http.StatusFound)
+		return false
+	}
+	established, err := store.HasSetupState(r.Context(), h.db)
+	if err != nil {
+		http.Error(w, "failed to check setup state", http.StatusInternalServerError)
+		return false
+	}
+	if established {
+		http.Error(w, "initial setup is already complete; restore service configuration before logging in", http.StatusConflict)
+		return false
+	}
+	return true
 }
 
 func setupInputFromConfig(cfg config.Config) config.SetupInput {

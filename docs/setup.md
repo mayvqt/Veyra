@@ -7,4 +7,6 @@ Veyra requires Jellyfin or Emby and two independent secrets:
 
 Use the root README quick start, then open `http://localhost:3767/setup`.
 
-Persist `/config` and back up `ENCRYPTION_KEY`. The first media-server administrator who signs in becomes a Veyra administrator.
+Complete setup on a trusted local network before exposing Veyra publicly. The setup wizard is unauthenticated only before any setup settings or users have been saved. Leave wizard-managed environment values empty unless you intend to override the wizard; see [Configuration](configuration.md).
+
+Persist `/config` and back up `ENCRYPTION_KEY`. Every media-server administrator who signs in receives Veyra administrator access; this is not limited to the first account. Administrator status is rechecked after 15 minutes on subsequent requests, with access denied if verification fails.

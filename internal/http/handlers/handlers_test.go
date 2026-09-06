@@ -618,6 +618,8 @@ type fakeSeerr struct {
 	createErr      error
 	lastRequest    sr.CreateRequestInput
 	createCalls    int
+	resolveByIDErr error
+	nameCalls      int
 }
 
 func (f *fakeSeerr) ID() string   { return "seerr" }
@@ -650,9 +652,31 @@ func (f *fakeSeerr) UserQuotaForUser(context.Context, sr.UserIdentity) (*sr.Quot
 }
 
 func (f *fakeSeerr) ResolveUser(context.Context, string, string) (*sr.UserIdentity, error) {
+	f.nameCalls++
 	return f.resolvedUser, nil
 }
 
 func (f *fakeSeerr) ResolveUserByMediaServerID(context.Context, string) (*sr.UserIdentity, error) {
+	if f.resolveByIDErr != nil {
+		return nil, f.resolveByIDErr
+	}
 	return f.resolvedUser, nil
+}
+
+func TestResolveSeerrUserNeverUsesMatchingNamesAsIdentity(t *testing.T) {
+	for _, mediaID := range []string{"unlinked-media-id", ""} {
+		t.Run(mediaID, func(t *testing.T) {
+			h, db := mkHandlers(t)
+			defer db.Close()
+			otherUser := sr.UserIdentity{ID: 99, Username: "same-name"}
+			fake := &fakeSeerr{resolvedUser: &otherUser, resolveByIDErr: errors.New("no linked identity")}
+			h.seerr = fake
+			r := httptest.NewRequest(http.MethodGet, "/dashboard", nil)
+			h.cacheSetJSON(r.Context(), "seerr:user:name:same-name", otherUser, time.Minute)
+			got := h.resolveSeerrUser(r, auth.User{MediaServerUserID: mediaID, Username: "same-name", DisplayName: "same-name"})
+			if got.ID != 0 || fake.nameCalls != 0 {
+				t.Fatal("unlinked account resolved another user's identity by name or legacy cache")
+			}
+		})
+	}
 }

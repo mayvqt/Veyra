@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -77,6 +78,32 @@ type SetupInput struct {
 	RadarrAPIKey         string
 	ProwlarrURL          string
 	ProwlarrAPIKey       string
+}
+
+var ErrSetupAlreadyComplete = errors.New("initial setup is already complete")
+
+// SaveInitialSetup claims first-run setup and saves its settings atomically.
+// Established installations must use the authenticated settings workflow.
+func SaveInitialSetup(ctx context.Context, db *sql.DB, crypto *security.Crypto, in SetupInput) error {
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin initial setup: %w", err)
+	}
+	defer tx.Rollback()
+	established, err := store.HasSetupState(ctx, tx)
+	if err != nil {
+		return fmt.Errorf("check initial setup: %w", err)
+	}
+	if established {
+		return ErrSetupAlreadyComplete
+	}
+	if err := SaveSetupTx(ctx, tx, crypto, in); err != nil {
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit initial setup: %w", err)
+	}
+	return nil
 }
 
 func ApplyStoredSetup(ctx context.Context, db *sql.DB, cfg Config) (Config, error) {
