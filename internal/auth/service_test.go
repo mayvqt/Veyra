@@ -4,12 +4,57 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
+	"net/http"
 	"testing"
 	"time"
 
+	"github.com/mayvqt/veyra/internal/integrations"
 	"github.com/mayvqt/veyra/internal/security"
 	"github.com/mayvqt/veyra/internal/store"
 )
+
+func TestResolveSessionRejectsRevokedUpstreamSession(t *testing.T) {
+	for _, status := range []int{http.StatusUnauthorized, http.StatusForbidden} {
+		for _, isAdmin := range []bool{false, true} {
+			t.Run(fmt.Sprintf("status_%d_admin_%t", status, isAdmin), func(t *testing.T) {
+				ctx := context.Background()
+				db := testDB(t)
+				defer db.Close()
+				row, err := store.UpsertUserByMediaServerID(ctx, db, store.UserRow{MediaServerUserID: "revoked-user", Username: "user", IsAdmin: isAdmin})
+				if err != nil {
+					t.Fatal(err)
+				}
+				checker := &checkerStub{err: fmt.Errorf("fetch media user: %w", integrations.NewHTTPStatusError("media server", "user", status))}
+				svc := NewService(db, security.NewCrypto("12345678901234567890123456789012"), testSessionSecret, checker)
+				raw, err := svc.CreateSession(ctx, User{ID: row.ID}, "token", "127.0.0.1", "test-agent")
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, _, err := svc.ResolveSession(ctx, raw); err != nil || checker.calls != 0 {
+					t.Fatalf("fresh session should retain the refresh interval: err=%v calls=%d", err, checker.calls)
+				}
+				idHash := security.HashSessionID(testSessionSecret, raw)
+				if err := store.UpdateSessionAdminCheckedAt(ctx, db, idHash, time.Now().Add(-16*time.Minute)); err != nil {
+					t.Fatal(err)
+				}
+				if _, _, err := svc.ResolveSession(ctx, raw); err == nil {
+					t.Fatal("revoked upstream session retained member access")
+				}
+				if _, err := store.GetSession(ctx, db, idHash); !errors.Is(err, sql.ErrNoRows) {
+					t.Fatalf("revoked session was not deleted: %v", err)
+				}
+				if _, _, err := svc.ResolveSession(ctx, raw); err == nil || checker.calls != 1 {
+					t.Fatalf("deleted session resolved again: err=%v calls=%d", err, checker.calls)
+				}
+				stored, err := store.GetUserByID(ctx, db, row.ID)
+				if err != nil || stored.IsAdmin != isAdmin {
+					t.Fatalf("session rejection changed stored user permissions: err=%v admin=%t", err, stored.IsAdmin)
+				}
+			})
+		}
+	}
+}
 
 func TestResolveSessionFailsClosedWhenAdminRefreshFails(t *testing.T) {
 	db := testDB(t)
