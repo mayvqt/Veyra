@@ -38,6 +38,52 @@ No browser wrapper is checked in. Use available shared browser tooling against
 a disposable local instance, with synthetic data, for desktop/mobile and
 interaction checks. Record any unverified login, admin, integration, or UI states.
 
+## Architecture and UI
+
+Read [Frontend and UI](architecture.md#frontend-and-ui) before changing templates,
+CSS, or browser JavaScript. Keep trusted decisions on the server, preserve
+server-rendered behavior, and reuse the existing CSS and feature-module boundaries.
+
+## Local browser visual checks
+
+Build or run a disposable local instance with synthetic data, then check the first
+meaningful screen at desktop and mobile widths. Verify page identity, useful
+rendered content, the absence of framework/runtime overlays and relevant console
+errors, and at least one primary interaction. Inspect screenshots for clipping,
+overlap, accidental wrapping, unreadable text, scroll traps, and broken responsive
+states. Store temporary screenshots and browser scripts outside the repository.
+
+## Data and schema
+
+SQLite access and migrations belong to `internal/store/`. Every schema change needs
+a new forward-only migration and coverage proving both a fresh database and an
+upgrade from the previous schema. Never edit or delete a migration that may have
+run in an existing installation. Use disposable databases for checks and do not
+point tests at a user's application database.
+
+## Validation and coordination
+
+Run focused checks while editing and expand to the full validation list above once
+for the reviewed batch. Give one agent ownership of each changed path, avoid
+duplicating passing checks, and review the stable combined diff before committing.
+Browser screenshots validate presentation; they do not replace programmatic tests.
+
+## Refactor checks
+
+For refactors, concurrency, or performance work, add or retain tests for the
+behavioral contract before changing structure. Run focused tests with the race
+detector where shared state or goroutine lifecycles change, and benchmark only the
+specific hot path being claimed. Prefer measured fixes over speculative caching or
+parallelism.
+
+## Documentation conventions
+
+Update the canonical document for every user-visible or operator-visible behavior
+changed in the same batch. Keep `README.md` as a short navigation and quick-start
+page; put durable detail in the focused files under `docs/`. Document verified
+behavior rather than plans, avoid duplicating configuration tables, and use
+relative links to canonical repository sources.
+
 ## Local bundle
 
 Run `bash scripts/build_local.sh [output-directory]` to build a local bundle,
