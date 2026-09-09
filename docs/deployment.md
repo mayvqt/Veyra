@@ -37,20 +37,3 @@ Do not reuse stale WAL/SHM files with the restored snapshot. Start the matching
 application version and check `/healthz`, login, settings, and integrations.
 Schema migrations run forward at startup; rollback requires the matching
 pre-upgrade backup rather than opening a newer schema with an older binary.
-
-## Production maintenance
-
-Only perform maintenance on an explicitly authorized instance. Confirm the target,
-take and verify a current backup, preserve the encryption key and deployment
-configuration, and avoid exposing credentials or private URLs in commands and
-logs. Prefer reversible changes and check `/healthz` plus the affected user flow
-afterward.
-
-## Release and deploy
-
-Release work requires explicit authorization beyond a local commit. Run the full
-development validation suite, build the local binary and container path, and review
-the exact version and image tag before publishing. Deploy immutable version tags or
-digests, keep the pre-upgrade database backup, and verify health, login, settings,
-and configured integrations after rollout. Do not treat a successful push as
-deployment approval.
