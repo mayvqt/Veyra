@@ -99,7 +99,11 @@
   position: relative;
   width: 1.02rem;
   height: 1.02rem;
+  min-width: 1.02rem;
+  min-height: 1.02rem;
+  flex: 0 0 1.02rem;
   margin: 0;
+  padding: 0;
   border: 1px solid rgba(126, 167, 197, 0.46);
   border-radius: 0.28rem;
   appearance: none;
