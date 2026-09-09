@@ -761,10 +761,11 @@ textarea:focus {
     overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
-    border: 1px solid var(--line);
-    border-left: 0;
-    border-radius: 0 24px 24px 0;
+    border: 0;
+    border-right: 1px solid var(--line);
+    border-radius: 0;
     background: linear-gradient(180deg, rgba(34, 27, 47, 0.92), rgba(19, 16, 27, 0.88));
+    box-shadow: none;
   }
 
   body:not(.auth-page) .container {
