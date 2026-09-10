@@ -19,21 +19,5 @@ Trust only the actual proxy network and forward the original scheme and host.
 
 For Unraid, install `templates/unraid/veyra.xml`, map `/mnt/user/appdata/veyra` to `/config`, and set the required secrets.
 
-Online database backup (existing files are not overwritten):
-
-```bash
-docker exec veyra veyra backup /config/veyra-$(date +%Y%m%d-%H%M%S).db
-```
-
-The backup destination must support hard links; unsupported filesystems fail
-without replacing an existing backup.
-
-Keep backups off the application host together with a securely stored copy of
-the original `ENCRYPTION_KEY` and deployment configuration. Test restoring a
-backup into a separate instance before upgrading. Stop Veyra before replacing
-its database, preserve the old database and its WAL/SHM files together, and
-restore the snapshot as `/config/veyra.db` with ownership matching `PUID`/`PGID`.
-Do not reuse stale WAL/SHM files with the restored snapshot. Start the matching
-application version and check `/healthz`, login, settings, and integrations.
-Schema migrations run forward at startup; rollback requires the matching
-pre-upgrade backup rather than opening a newer schema with an older binary.
+Follow [Operations](development/operations.md) for backup, restore, health
+verification, release, and rollback procedures.
