@@ -638,6 +638,10 @@
 }
 
 @media (max-width: 640px) {
+  .quota-title-row {
+    align-items: stretch;
+  }
+
   .calendar-tools,
   .calendar-legend,
   .calendar-nav {

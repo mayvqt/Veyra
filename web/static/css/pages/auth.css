@@ -18,6 +18,10 @@
   padding: 1rem;
 }
 
+.login-page .auth-shell {
+  width: min(410px, 100%);
+}
+
 .auth-card {
   width: 100%;
   border: 1px solid var(--line);
@@ -25,7 +29,7 @@
   background:
     linear-gradient(180deg, rgba(18, 27, 36, 0.94), rgba(9, 15, 21, 0.96));
   box-shadow: var(--shadow);
-  padding: 1.1rem;
+  padding: 1rem;
 }
 
 .login-layout {
@@ -40,13 +44,13 @@
 .login-panel {
   display: grid;
   align-content: center;
-  padding: 1.5rem 0.35rem 0.35rem;
+  padding: 1.15rem 0.25rem 0.25rem;
   text-align: left;
 }
 
 .login-panel h1 {
   margin: 0 0 var(--space-4);
-  font-size: clamp(1.75rem, 3vw, 2.6rem);
+  font-size: clamp(1.85rem, 3vw, 2.25rem);
   line-height: 1;
 }
 
@@ -64,7 +68,7 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.25rem 0.35rem 1.15rem;
+  padding: 0.15rem 0.25rem 0.95rem;
   color: var(--text);
   font-size: 1.05rem;
   font-weight: 800;
@@ -78,7 +82,7 @@
 }
 
 .login-form {
-  gap: var(--space-4);
+  gap: 0.95rem;
 }
 
 .remember-toggle {
@@ -95,7 +99,11 @@
   position: relative;
   width: 1.02rem;
   height: 1.02rem;
+  min-width: 1.02rem;
+  min-height: 1.02rem;
+  flex: 0 0 1.02rem;
   margin: 0;
+  padding: 0;
   border: 1px solid rgba(126, 167, 197, 0.46);
   border-radius: 0.28rem;
   appearance: none;
@@ -158,11 +166,15 @@
   }
 
   .auth-card {
-    padding: 1rem;
+    padding: 0.9rem;
+  }
+
+  .login-page .auth-shell {
+    width: min(100%, 410px);
   }
 
   .login-panel {
-    padding: 1.25rem 0 0;
+    padding: 1rem 0 0;
     text-align: left;
   }
 
