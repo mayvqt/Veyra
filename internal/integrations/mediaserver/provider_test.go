@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/mayvqt/veyra/internal/buildinfo"
 	"github.com/mayvqt/veyra/internal/config"
 )
 
@@ -86,19 +87,55 @@ func TestProviderUserRoutesAreProviderSpecific(t *testing.T) {
 	}
 }
 
-func TestProviderTokenAuthorizationIsShared(t *testing.T) {
+func TestProviderTokenAuthorizationIsProviderSpecific(t *testing.T) {
+	tests := []struct {
+		name           string
+		serverType     config.MediaServerType
+		wantAuth       string
+		wantDeprecated string
+	}{
+		{name: "jellyfin", serverType: config.MediaServerJellyfin, wantAuth: `MediaBrowser Client="Veyra", Device="Web", DeviceId="veyra-jellyfin", Version="` + buildinfo.Version + `", Token="token"`},
+		{name: "emby", serverType: config.MediaServerEmby, wantDeprecated: "token"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			provider, err := newProvider(test.serverType)
+			if err != nil {
+				t.Fatal(err)
+			}
+			req, err := http.NewRequest(http.MethodGet, "https://watch.example/System/Ping", nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			provider.Authorize(req, "token")
+			if got := req.Header.Get("Authorization"); got != test.wantAuth {
+				t.Fatalf("unexpected authorization header %q", got)
+			}
+			if got := req.Header.Get("X-Emby-Token"); got != test.wantDeprecated {
+				t.Fatalf("unexpected deprecated token header %q", got)
+			}
+		})
+	}
+}
+
+func TestProviderTokenAuthorizationOmitsEmptyTokens(t *testing.T) {
 	for _, serverType := range []config.MediaServerType{config.MediaServerJellyfin, config.MediaServerEmby} {
-		provider, err := newProvider(serverType)
-		if err != nil {
-			t.Fatal(err)
-		}
-		req, err := http.NewRequest(http.MethodGet, "https://watch.example/System/Ping", nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-		provider.Authorize(req, "token")
-		if req.Header.Get("X-Emby-Token") != "token" {
-			t.Fatalf("%s did not apply the shared token headers", serverType)
-		}
+		t.Run(string(serverType), func(t *testing.T) {
+			provider, err := newProvider(serverType)
+			if err != nil {
+				t.Fatal(err)
+			}
+			req, err := http.NewRequest(http.MethodGet, "https://watch.example/System/Ping", nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			provider.Authorize(req, "")
+			if got := req.Header.Get("Authorization"); got != "" {
+				t.Fatalf("expected no token authorization, got %q", got)
+			}
+			if got := req.Header.Get("X-Emby-Token"); got != "" {
+				t.Fatalf("expected no deprecated token header, got %q", got)
+			}
+		})
 	}
 }

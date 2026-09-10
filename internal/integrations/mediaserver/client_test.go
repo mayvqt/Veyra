@@ -180,8 +180,11 @@ func TestRecentlyAddedFetchesMovieAndTVConcurrently(t *testing.T) {
 func TestRecentlyAddedUsesAPIKeyWhenTokenEmpty(t *testing.T) {
 	c := newTestClient(t, config.MediaServerJellyfin, "http://mediaserver.local", "https://jf.example", "server-key")
 	c.http = &http.Client{Transport: testutil.RoundTripFunc(func(r *http.Request) (*http.Response, error) {
-		if got := r.Header.Get("X-Emby-Token"); got != "server-key" {
-			t.Fatalf("expected X-Emby-Token header to use api key, got %q", got)
+		if got := r.Header.Get("Authorization"); !strings.Contains(got, "MediaBrowser ") || !strings.Contains(got, `Token="server-key"`) {
+			t.Fatalf("expected Jellyfin token authorization to use api key, got %q", got)
+		}
+		if got := r.Header.Get("X-Emby-Token"); got != "" {
+			t.Fatalf("expected no deprecated token header, got %q", got)
 		}
 		return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader("[]")), Header: make(http.Header)}, nil
 	})}
@@ -252,8 +255,11 @@ func TestAdminSummaryCollectsServerStats(t *testing.T) {
 		case "/System/Info":
 			return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(`{"ServerName":"Library","Version":"10.9.0","OperatingSystem":"Linux"}`)), Header: make(http.Header)}, nil
 		case "/Users":
-			if got := r.Header.Get("X-Emby-Token"); got != "server-key" {
-				t.Fatalf("expected server api key, got %q", got)
+			if got := r.Header.Get("Authorization"); !strings.Contains(got, "MediaBrowser ") || !strings.Contains(got, `Token="server-key"`) {
+				t.Fatalf("expected Jellyfin token authorization to use api key, got %q", got)
+			}
+			if got := r.Header.Get("X-Emby-Token"); got != "" {
+				t.Fatalf("expected no deprecated token header, got %q", got)
 			}
 			return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(`[{"Name":"A"},{"Name":"B"}]`)), Header: make(http.Header)}, nil
 		case "/Items/Counts":

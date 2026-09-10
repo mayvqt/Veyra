@@ -13,7 +13,7 @@ type embyProvider struct{}
 func (embyProvider) Name() string { return config.MediaServerEmby.Label() }
 
 func (embyProvider) AuthorizeLogin(req *http.Request) {
-	req.Header.Set("Authorization", clientAuthorizationHeader("Emby", "veyra-emby"))
+	req.Header.Set("Authorization", clientAuthorizationHeader("Emby", "veyra-emby", ""))
 }
 
 func (embyProvider) Authorize(req *http.Request, token string) {
