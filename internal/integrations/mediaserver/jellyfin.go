@@ -13,11 +13,15 @@ type jellyfinProvider struct{}
 func (jellyfinProvider) Name() string { return config.MediaServerJellyfin.Label() }
 
 func (jellyfinProvider) AuthorizeLogin(req *http.Request) {
-	req.Header.Set("Authorization", clientAuthorizationHeader("MediaBrowser", "veyra-jellyfin"))
+	req.Header.Set("Authorization", clientAuthorizationHeader("MediaBrowser", "veyra-jellyfin", ""))
 }
 
 func (jellyfinProvider) Authorize(req *http.Request, token string) {
-	authorizeWithToken(req, token)
+	req.Header.Del("X-Emby-Token")
+	if token == "" {
+		return
+	}
+	req.Header.Set("Authorization", clientAuthorizationHeader("MediaBrowser", "veyra-jellyfin", token))
 }
 
 func (jellyfinProvider) LatestItemsPath(userID, itemTypes string, limit int) string {

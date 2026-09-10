@@ -18,8 +18,11 @@ func TestFetchUserAdminStatusEscapesUserIDPath(t *testing.T) {
 		if req.URL.EscapedPath() != "/Users/user%2Fwith%20slash" {
 			t.Fatalf("expected escaped user path, got path=%q escaped=%q", req.URL.Path, req.URL.EscapedPath())
 		}
-		if got := req.Header.Get("X-Emby-Token"); got != "token" {
-			t.Fatalf("expected user token, got %q", got)
+		if got := req.Header.Get("Authorization"); !strings.Contains(got, `MediaBrowser `) || !strings.Contains(got, `Token="token"`) {
+			t.Fatalf("expected Jellyfin token authorization, got %q", got)
+		}
+		if got := req.Header.Get("X-Emby-Token"); got != "" {
+			t.Fatalf("expected no deprecated token header, got %q", got)
 		}
 		return response(http.StatusOK, `{"Policy":{"IsAdministrator":true}}`), nil
 	})}
@@ -56,6 +59,9 @@ func TestProviderLoginAuthorizationIsExplicit(t *testing.T) {
 					if !strings.Contains(header, expected) {
 						t.Fatalf("expected %q in authorization header %q", expected, header)
 					}
+				}
+				if strings.Contains(header, `Token=`) {
+					t.Fatalf("expected login authorization without token field, got %q", header)
 				}
 				return response(http.StatusOK, `{"AccessToken":"token","User":{"Id":"user-1","Name":"Angel","Policy":{"IsAdministrator":true}}}`), nil
 			})}
