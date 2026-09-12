@@ -10,7 +10,7 @@
   <main class="app-shell dashboard-shell">
     <aside class="topbar dashboard-rail">
       <div class="brand-lockup">
-        <div class="brand">{{ .AppName }}</div>
+        {{ template "brand" . }}
         <span class="brand-caption">Media portal</span>
       </div>
       <div class="topbar-right">
@@ -19,6 +19,7 @@
           <a class="nav-link" href="/guide">Guide</a>
           {{ if .User.IsAdmin }}<a class="nav-link admin-nav-link" href="/admin">Admin</a>{{ end }}
         </nav>
+        <div data-dashboard-refresh="services">
         {{ if .DashboardServices }}
         <div class="rail-links" aria-labelledby="media-services-title">
           <p id="media-services-title" class="rail-label">Quick Links</p>
@@ -31,6 +32,7 @@
           {{ end }}
         </div>
         {{ end }}
+        </div>
         <form method="post" action="/logout" class="topbar-logout">
           <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
           <button class="btn secondary" type="submit">Sign out</button>
@@ -44,6 +46,7 @@
           <h1 class="page-title">Welcome, {{ .User.DisplayName }}</h1>
         </div>
       </header>
+      <div data-dashboard-refresh="notices">
       {{ if .DashboardMessage }}
       <section class="panel admin-message">
         <h2>Notice</h2>
@@ -54,6 +57,7 @@
       <p class="subtitle" role="status">Some dashboard data is temporarily cached.</p>
       {{ end }}
 
+      </div>
       {{ if .SettingsShowRequestBot }}
       <section class="panel request-bot" data-seerr-request-bot>
         <div class="request-bot-head">
@@ -61,6 +65,10 @@
             <h2>Request media</h2>
           </div>
         </div>
+        {{ if .RequestAccessNote }}
+        <p class="subtitle">{{ .RequestAccessNote }}</p>
+        {{ if .SeerrPublicURL }}<a class="btn secondary" href="{{ .SeerrPublicURL }}" target="_blank" rel="noopener noreferrer">Open Seerr</a>{{ end }}
+        {{ else }}
         <form class="request-bot-search" data-seerr-search-form>
           <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}" data-seerr-csrf>
           <label class="request-bot-query">
@@ -71,6 +79,7 @@
         </form>
         <div class="request-bot-message" data-seerr-message role="status" aria-live="polite" aria-atomic="true" hidden></div>
         <ul class="request-bot-results" data-seerr-results></ul>
+        {{ end }}
       </section>
       {{ end }}
 
@@ -113,7 +122,7 @@
         {{ if .SettingsShowCalendar }}
         <section class="panel calendar-panel" data-dashboard-refresh="calendar">
           <div class="panel-title-row">
-            <h2>Upcoming</h2>
+            <h2>Upcoming <small>(UTC)</small></h2>
             <div class="calendar-tools">
               <div class="calendar-legend" aria-label="Availability legend">
                 <span class="legend-item"><span class="legend-dot legend-available"></span>Available</span>
@@ -127,6 +136,7 @@
               </div>
             </div>
           </div>
+          {{ if .CalendarNote }}<p class="subtitle" role="status">{{ .CalendarNote }}</p>{{ end }}
           {{ if .UpcomingCalendarGroups }}
           <div class="calendar-board">
             {{ range .UpcomingCalendarGroups }}
@@ -140,13 +150,13 @@
                     {{ if .Subtitle }}<span class="meta-line">{{ .Subtitle }}</span>{{ end }}
                   </div>
                   <div class="upcoming-meta">
-                    <span class="calendar-local-time" data-utc="{{ .AirsAt.UTC.Format "2006-01-02T15:04:05Z07:00" }}">{{ .AirsAt.Format "15:04" }} UTC</span>
+                    <span class="calendar-local-time" data-utc="{{ .AirsAt.UTC.Format "2006-01-02T15:04:05Z07:00" }}">{{ .AirsAt.UTC.Format "15:04" }} UTC</span>
                     <span class="pill availability-pill availability-{{ .Availability }}">{{ .Availability }}</span>
                     <span class="pill">{{ .Kind }}</span>
                     {{ if eq .Availability "available" }}
-                    <a class="mini-action" href="{{ $.MediaServerPublicURL }}">{{ $.MediaServerName }}</a>
+                    {{ if $.MediaServerPublicURL }}<a class="mini-action" href="{{ $.MediaServerPublicURL }}">{{ $.MediaServerName }}</a>{{ end }}
                     {{ else }}
-                    <a class="mini-action" href="{{ $.SeerrPublicURL }}">Seerr</a>
+                    {{ if $.SeerrPublicURL }}<a class="mini-action" href="{{ $.SeerrPublicURL }}">Seerr</a>{{ end }}
                     {{ end }}
                   </div>
                 </li>
@@ -160,8 +170,8 @@
             </section>
             {{ end }}
           </div>
-          {{ else }}
-          <p class="subtitle">No upcoming calendar items in the next 7 days.</p>
+          {{ else if not .CalendarNote }}
+          <p class="subtitle">No scheduled items this week.</p>
           {{ end }}
         </section>
         {{ end }}
@@ -225,7 +235,7 @@
             {{ end }}
           </ul>
           {{ else }}
-          <p class="subtitle empty-state">Recent requests are unavailable right now.</p>
+          <p class="subtitle empty-state">{{ .RecentRequestsNote }}</p>
           {{ end }}
         </section>
         {{ end }}
@@ -240,6 +250,7 @@
               <button type="button" class="btn secondary queue-filter-btn" data-kind-filter="tv" aria-pressed="false">Shows</button>
             </div>
           </div>
+          {{ if .QueueNote }}<p class="subtitle" role="status">{{ .QueueNote }}</p>{{ end }}
           {{ if .DownloadQueue }}
           <ul class="stack queue-list" id="download-queue-list">
             {{ range .DownloadQueue }}
@@ -262,7 +273,7 @@
             {{ end }}
           </ul>
           <p class="subtitle queue-filter-empty" role="status" aria-live="polite" hidden>No downloads match this filter.</p>
-          {{ else }}
+          {{ else if not .QueueNote }}
           <p class="subtitle empty-state">No active downloads in queue right now.</p>
           {{ end }}
         </section>

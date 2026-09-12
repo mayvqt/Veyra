@@ -9,7 +9,7 @@
 <body class="guide-page">
   <main class="app-shell">
     <div class="topbar">
-      <div class="brand">{{ .AppName }}</div>
+      {{ template "brand" . }}
       <div class="topbar-right">
         <nav class="topnav" aria-label="Primary navigation">
           <a class="nav-link" href="/dashboard">Dashboard</a>
@@ -34,12 +34,15 @@
       <div class="grid">
         <section class="panel half">
           <h2>Watch in a browser</h2>
+          {{ if .MediaServerPublicURL }}
           <p class="subtitle">Click the button below, then sign in with your {{ .MediaServerName }} username and password.</p>
           <div class="actions">
             <a class="btn" href="{{ .MediaServerPublicURL }}">Open {{ .MediaServerName }}</a>
           </div>
+          {{ else }}<p class="subtitle">Ask your administrator for the {{ .MediaServerName }} address to watch in a browser or set up the app.</p>{{ end }}
         </section>
 
+        {{ if .SeerrPublicURL }}
         <section class="panel half">
           <h2>Request a movie or show</h2>
           <p class="subtitle">Use Seerr to request something new to watch. Search for a movie or TV show, then press Request.</p>
@@ -48,6 +51,8 @@
           </div>
         </section>
 
+        {{ end }}
+        {{ if .MediaServerPublicURL }}
         <section class="panel">
           <h2>Set up the {{ .MediaServerName }} app</h2>
           <ul class="stack">
@@ -69,11 +74,13 @@
             </li>
             <li class="stack-item">
               <strong>If it does not work</strong>
-              <span class="meta-line">Check that the server is exactly <strong>{{ .MediaServerPublicURL }}</strong> (with https), then try again. If login fails, double-check username/password.</span>
+              <span class="meta-line">Check that the server is exactly <strong>{{ .MediaServerPublicURL }}</strong>, then try again. If login fails, double-check username/password.</span>
             </li>
           </ul>
         </section>
 
+        {{ end }}
+        {{ if .SeerrPublicURL }}
         <section class="panel">
           <h2>After you make a request</h2>
           <ul class="stack">
@@ -84,6 +91,7 @@
             <li class="stack-item"><strong>5.</strong> If it has been a long time, open an issue in Seerr for that movie or show.</li>
           </ul>
         </section>
+        {{ end }}
       </div>
     </section>
   </main>

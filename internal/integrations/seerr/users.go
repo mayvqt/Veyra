@@ -2,7 +2,7 @@ package seerr
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"net/http"
 	"net/url"
 	"strings"
@@ -10,43 +10,12 @@ import (
 	"github.com/mayvqt/veyra/internal/integrations"
 )
 
-func (c *Client) ResolveUser(ctx context.Context, username, displayName string) (*UserIdentity, error) {
-	q := url.Values{}
-	q.Set("take", "200")
-	q.Set("skip", "0")
-	q.Set("sort", "displayname")
-	req, err := c.newRequest(ctx, http.MethodGet, "/api/v1/user?"+q.Encode(), nil)
-	if err != nil {
-		return nil, err
-	}
-	resp, err := c.http.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return nil, integrations.NewHTTPStatusError("Seerr", "user list", resp.StatusCode)
-	}
-	var payload userListDTO
-	if err := decodeLimitedSeerrJSON(resp.Body, &payload); err != nil {
-		return nil, err
-	}
-	for _, row := range payload.Results {
-		if userMatches(row, username, displayName) {
-			user, ok := userIdentity(row)
-			if !ok {
-				return nil, fmt.Errorf("seerr user not found")
-			}
-			return user, nil
-		}
-	}
-	return nil, fmt.Errorf("seerr user not found")
-}
+var ErrUserNotLinked = errors.New("media server account is not linked in Seerr")
 
 func (c *Client) ResolveUserByMediaServerID(ctx context.Context, mediaServerUserID string) (*UserIdentity, error) {
 	mediaServerUserID = strings.TrimSpace(mediaServerUserID)
 	if mediaServerUserID == "" {
-		return nil, fmt.Errorf("media server user id missing")
+		return nil, ErrUserNotLinked
 	}
 	path := mediaServerUserLookupPath(mediaServerUserID)
 	req, err := c.newRequest(ctx, http.MethodGet, path, nil)
@@ -58,6 +27,9 @@ func (c *Client) ResolveUserByMediaServerID(ctx context.Context, mediaServerUser
 		return nil, err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, ErrUserNotLinked
+	}
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		return nil, integrations.NewHTTPStatusError("Seerr", "media server user lookup", resp.StatusCode)
 	}
@@ -67,7 +39,7 @@ func (c *Client) ResolveUserByMediaServerID(ctx context.Context, mediaServerUser
 	}
 	user, ok := userIdentity(row)
 	if !ok {
-		return nil, fmt.Errorf("seerr user not found")
+		return nil, ErrUserNotLinked
 	}
 	return user, nil
 }
@@ -89,20 +61,6 @@ func userIdentity(row userDTO) (*UserIdentity, bool) {
 	}, true
 }
 
-func userMatches(row userDTO, names ...string) bool {
-	for _, value := range []string{row.DisplayName, row.Username, row.PlexUsername, row.JellyfinUsername, row.Email} {
-		if strings.TrimSpace(value) == "" {
-			continue
-		}
-		for _, name := range names {
-			if sameLooseName(value, name) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
 func firstNonEmptyString(values ...string) string {
 	for _, value := range values {
 		if value = strings.TrimSpace(value); value != "" {
@@ -119,16 +77,4 @@ func firstString(row map[string]any, fields ...string) string {
 		}
 	}
 	return ""
-}
-
-func sameLooseName(a, b string) bool {
-	return normalizeName(a) != "" && normalizeName(a) == normalizeName(b)
-}
-
-func normalizeName(s string) string {
-	s = strings.TrimSpace(strings.ToLower(s))
-	if i := strings.Index(s, "@"); i > 0 {
-		s = s[:i]
-	}
-	return strings.Join(strings.Fields(s), " ")
 }

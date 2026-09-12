@@ -8,22 +8,9 @@ import (
 	"github.com/mayvqt/veyra/internal/integrations"
 )
 
-func (c *Client) UserQuota(ctx context.Context) (*Quota, error) {
-	if err := c.requireConfigured(); err != nil {
-		return nil, err
-	}
-	for _, path := range []string{"/api/v1/user", "/api/v1/auth/me"} {
-		q, err := c.userQuotaFrom(ctx, path)
-		if err == nil && q != nil {
-			return q, nil
-		}
-	}
-	return nil, fmt.Errorf("quota unavailable")
-}
-
 func (c *Client) UserQuotaForUser(ctx context.Context, user UserIdentity) (*Quota, error) {
 	if user.ID <= 0 {
-		return nil, fmt.Errorf("seerr user not resolved")
+		return nil, ErrUserNotLinked
 	}
 	return c.userQuotaFrom(ctx, fmt.Sprintf("/api/v1/user/%d/quota", user.ID))
 }
@@ -70,25 +57,25 @@ func (c *Client) userQuotaFrom(ctx context.Context, path string) (*Quota, error)
 		q.Unlimited = true
 		q.Used = used
 	}
-	if lok && uok && limit > 0 && used >= 0 && used <= limit {
+	if lok && uok && limit > 0 && used >= 0 {
 		q.Limit = limit
 		q.Used = used
-		q.Remaining = limit - used
+		q.Remaining = max(0, limit-used)
 	}
-	if mLok && mUok && mLimit >= 0 && mUsed >= 0 && (mLimit == 0 || mUsed <= mLimit) {
+	if mLok && mUok && mLimit >= 0 && mUsed >= 0 {
 		q.MovieLimit = mLimit
 		q.MovieUsed = mUsed
 		q.MovieUnlimited = mLimit == 0
 		if mLimit > 0 {
-			q.MovieRemaining = mLimit - mUsed
+			q.MovieRemaining = max(0, mLimit-mUsed)
 		}
 	}
-	if sLok && sUok && sLimit >= 0 && sUsed >= 0 && (sLimit == 0 || sUsed <= sLimit) {
+	if sLok && sUok && sLimit >= 0 && sUsed >= 0 {
 		q.SeriesLimit = sLimit
 		q.SeriesUsed = sUsed
 		q.SeriesUnlimited = sLimit == 0
 		if sLimit > 0 {
-			q.SeriesRemaining = sLimit - sUsed
+			q.SeriesRemaining = max(0, sLimit-sUsed)
 		}
 	}
 
@@ -98,7 +85,7 @@ func (c *Client) userQuotaFrom(ctx context.Context, path string) (*Quota, error)
 	if q.Limit == 0 && (q.MovieLimit > 0 || q.SeriesLimit > 0) {
 		q.Limit = q.MovieLimit + q.SeriesLimit
 		q.Used = q.MovieUsed + q.SeriesUsed
-		q.Remaining = q.Limit - q.Used
+		q.Remaining = q.MovieRemaining + q.SeriesRemaining
 	}
 	return q, nil
 }

@@ -79,7 +79,12 @@ func (h *Handlers) SeerrRequestPost(w http.ResponseWriter, r *http.Request) {
 		seasons = nil
 	}
 
-	seerrUser := h.resolveSeerrUser(r, user)
+	seerrUser, err := h.resolveSeerrUser(r, user)
+	if err != nil && !errors.Is(err, seerr.ErrUserNotLinked) {
+		w.WriteHeader(http.StatusBadGateway)
+		_ = json.NewEncoder(w).Encode(seerrCreateRequestResponse{Error: "Seerr is unavailable right now. Try again shortly."})
+		return
+	}
 	if seerrUser.ID <= 0 {
 		w.WriteHeader(http.StatusConflict)
 		_ = json.NewEncoder(w).Encode(seerrCreateRequestResponse{Error: "Link this " + h.cfg.MediaServerType.Label() + " user in Seerr before requesting."})
@@ -93,6 +98,11 @@ func (h *Handlers) SeerrRequestPost(w http.ResponseWriter, r *http.Request) {
 		Seasons:   seasons,
 	})
 	if err != nil {
+		if errors.Is(err, seerr.ErrRequestConflict) {
+			w.WriteHeader(http.StatusConflict)
+			_ = json.NewEncoder(w).Encode(seerrCreateRequestResponse{Error: "That title or season is already requested or available. Search again to see the current choices."})
+			return
+		}
 		h.log.Warn("seerr request failed", "user", user.Username, "media_id", mediaID, "media_type", mediaType, "err", security.RedactErr(err))
 		w.WriteHeader(http.StatusBadGateway)
 		_ = json.NewEncoder(w).Encode(seerrCreateRequestResponse{Error: cleanSeerrClientError()})

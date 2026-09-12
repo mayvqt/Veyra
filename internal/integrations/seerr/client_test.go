@@ -70,10 +70,10 @@ func TestNotConfiguredReturnsErrorsWithoutRequests(t *testing.T) {
 	if _, err := c.CreateRequest(context.Background(), CreateRequestInput{MediaID: 1, MediaType: "movie"}); err == nil {
 		t.Fatal("expected create request configuration error")
 	}
-	if _, err := c.UserQuota(context.Background()); err == nil {
+	if _, err := c.UserQuotaForUser(context.Background(), UserIdentity{ID: 7}); err == nil {
 		t.Fatal("expected quota configuration error")
 	}
-	if _, err := c.ResolveUser(context.Background(), "admin", "Admin"); err == nil {
+	if _, err := c.ResolveUserByMediaServerID(context.Background(), "media-user"); err == nil {
 		t.Fatal("expected user resolve configuration error")
 	}
 	if _, err := c.ResolveUserByMediaServerID(context.Background(), "jf-123"); err == nil {
@@ -102,14 +102,14 @@ func TestMalformedBaseURLReturnsErrorsWithoutRequests(t *testing.T) {
 func TestUserQuotaPrimaryEndpoint(t *testing.T) {
 	c := NewClient("http://seerr.local", "https://seerr.example", "k")
 	c.http = &http.Client{Transport: testutil.RoundTripFunc(func(r *http.Request) (*http.Response, error) {
-		if r.URL.Path == "/api/v1/user" {
+		if r.URL.Path == "/api/v1/user/7/quota" {
 			body := `{"requestLimit":10,"requestCount":3}`
 			return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(body)), Header: make(http.Header)}, nil
 		}
 		return &http.Response{StatusCode: 404, Body: io.NopCloser(strings.NewReader("")), Header: make(http.Header)}, nil
 	})}
 
-	q, err := c.UserQuota(context.Background())
+	q, err := c.UserQuotaForUser(context.Background(), UserIdentity{ID: 7})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,39 +118,17 @@ func TestUserQuotaPrimaryEndpoint(t *testing.T) {
 	}
 }
 
-func TestUserQuotaFallbackEndpoint(t *testing.T) {
-	c := NewClient("http://seerr.local", "https://seerr.example", "k")
-	c.http = &http.Client{Transport: testutil.RoundTripFunc(func(r *http.Request) (*http.Response, error) {
-		if r.URL.Path == "/api/v1/user" {
-			return &http.Response{StatusCode: 404, Body: io.NopCloser(strings.NewReader("")), Header: make(http.Header)}, nil
-		}
-		if r.URL.Path == "/api/v1/auth/me" {
-			body := `{"user":{"requestLimit":5,"requestCount":2}}`
-			return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(body)), Header: make(http.Header)}, nil
-		}
-		return &http.Response{StatusCode: 404, Body: io.NopCloser(strings.NewReader("")), Header: make(http.Header)}, nil
-	})}
-
-	q, err := c.UserQuota(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if q.Remaining != 3 {
-		t.Fatalf("expected remaining 3 got %d", q.Remaining)
-	}
-}
-
 func TestUserQuotaMovieSeriesFields(t *testing.T) {
 	c := NewClient("http://seerr.local", "https://seerr.example", "k")
 	c.http = &http.Client{Transport: testutil.RoundTripFunc(func(r *http.Request) (*http.Response, error) {
-		if r.URL.Path == "/api/v1/user" {
+		if r.URL.Path == "/api/v1/user/7/quota" {
 			body := `{"movieRequestLimit":4,"movieRequestCount":1,"seriesRequestLimit":6,"seriesRequestCount":2}`
 			return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(body)), Header: make(http.Header)}, nil
 		}
 		return &http.Response{StatusCode: 404, Body: io.NopCloser(strings.NewReader("")), Header: make(http.Header)}, nil
 	})}
 
-	q, err := c.UserQuota(context.Background())
+	q, err := c.UserQuotaForUser(context.Background(), UserIdentity{ID: 7})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -185,22 +163,18 @@ func TestRecentRequestsForUserResolvesTitles(t *testing.T) {
 	}
 }
 
-func TestRecentRequestsForUnresolvedUserUsesDefaultLimit(t *testing.T) {
+func TestUnlinkedUserNeverLoadsPrivateData(t *testing.T) {
 	c := NewClient("http://seerr.local", "https://seerr.example", "k")
 	c.http = &http.Client{Transport: testutil.RoundTripFunc(func(r *http.Request) (*http.Response, error) {
-		body := `{"results":[
-			{"status":1,"media":{"mediaType":"movie","title":"One"},"requestedBy":{"username":"admin"}},
-			{"status":1,"media":{"mediaType":"movie","title":"Two"},"requestedBy":{"username":"admin"}}
-		]}`
-		return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(body)), Header: make(http.Header)}, nil
+		t.Fatal("unlinked identity must not make an upstream request")
+		return nil, nil
 	})}
-
-	reqs, err := c.RecentRequestsForUser(context.Background(), UserIdentity{Username: "admin"}, 0)
-	if err != nil {
-		t.Fatal(err)
+	user := UserIdentity{Username: "admin"}
+	if _, err := c.RecentRequestsForUser(context.Background(), user, 0); err != ErrUserNotLinked {
+		t.Fatalf("history error: %v", err)
 	}
-	if len(reqs) != 2 {
-		t.Fatalf("expected default limit to return both requests, got %d", len(reqs))
+	if _, err := c.UserQuotaForUser(context.Background(), user); err != ErrUserNotLinked {
+		t.Fatalf("quota error: %v", err)
 	}
 }
 
@@ -304,25 +278,6 @@ func TestRecentRequestsPendingAvailabilityStaysApproved(t *testing.T) {
 	}
 	if reqs[0].Lifecycle[1].State != requestLifecycleStateCurrent {
 		t.Fatalf("expected approved lifecycle to be current, got %+v", reqs[0].Lifecycle)
-	}
-}
-
-func TestResolveUserMatchesUsername(t *testing.T) {
-	c := NewClient("http://seerr.local", "https://seerr.example", "k")
-	c.http = &http.Client{Transport: testutil.RoundTripFunc(func(r *http.Request) (*http.Response, error) {
-		if r.URL.Path == "/api/v1/user" {
-			body := `{"results":[{"id":7,"username":"admin","displayName":"Admin User"},{"id":8,"username":"other"}]}`
-			return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(body)), Header: make(http.Header)}, nil
-		}
-		return &http.Response{StatusCode: 404, Body: io.NopCloser(strings.NewReader("")), Header: make(http.Header)}, nil
-	})}
-
-	user, err := c.ResolveUser(context.Background(), "admin", "Administrator")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if user.ID != 7 {
-		t.Fatalf("expected user 7 got %+v", user)
 	}
 }
 

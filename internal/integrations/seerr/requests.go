@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -37,26 +38,13 @@ func (c *Client) RecentRequests(ctx context.Context, limit int) ([]dashboard.Req
 }
 
 func (c *Client) RecentRequestsForUser(ctx context.Context, user UserIdentity, limit int) ([]dashboard.RequestItem, error) {
+	if user.ID <= 0 {
+		return nil, ErrUserNotLinked
+	}
 	if limit <= 0 {
 		limit = 10
 	}
-	if user.ID > 0 {
-		return c.recentRequestsFrom(ctx, requestListPath(limit, user.ID), limit)
-	}
-	reqs, err := c.recentRequestsFrom(ctx, requestListPath(limit*4, 0), limit*4)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]dashboard.RequestItem, 0, limit)
-	for _, req := range reqs {
-		if sameLooseName(req.User, user.Username) || sameLooseName(req.User, user.DisplayName) {
-			out = append(out, req)
-			if len(out) >= limit {
-				break
-			}
-		}
-	}
-	return out, nil
+	return c.recentRequestsFrom(ctx, requestListPath(limit, user.ID), limit)
 }
 
 func requestListPath(limit, requestedBy int) string {
@@ -121,7 +109,12 @@ func (c *Client) recentRequestsFrom(ctx context.Context, path string, limit int)
 	return out, nil
 }
 
+var ErrRequestConflict = errors.New("selected media no longer needs a request")
+
 func (c *Client) CreateRequest(ctx context.Context, in CreateRequestInput) (CreatedRequest, error) {
+	if in.UserID <= 0 {
+		return CreatedRequest{}, ErrUserNotLinked
+	}
 	mediaType := normalizeSeerrMediaType(in.MediaType)
 	if in.MediaID <= 0 || mediaType == "" {
 		return CreatedRequest{}, fmt.Errorf("invalid request target")
@@ -161,6 +154,12 @@ func (c *Client) CreateRequest(ctx context.Context, in CreateRequestInput) (Crea
 	var row createdRequestDTO
 	if err := decodeSeerrJSON(resp, &row); err != nil {
 		return CreatedRequest{}, err
+	}
+	if row.ID <= 0 {
+		if resp.StatusCode == http.StatusAccepted {
+			return CreatedRequest{}, ErrRequestConflict
+		}
+		return CreatedRequest{}, fmt.Errorf("seerr returned no request identifier")
 	}
 	return CreatedRequest{ID: row.ID, Status: statusLabel(row.Status)}, nil
 }

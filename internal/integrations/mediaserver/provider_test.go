@@ -63,6 +63,34 @@ func TestProviderItemLinksAreProviderSpecific(t *testing.T) {
 	}
 }
 
+func TestProviderLatestFieldsPreserveTVIdentity(t *testing.T) {
+	for _, test := range []struct {
+		serverType config.MediaServerType
+		itemTypes  string
+		fieldKey   string
+		wantFields string
+	}{
+		{config.MediaServerJellyfin, "Movie", "fields", "DateCreated"},
+		{config.MediaServerJellyfin, recentTVTypes, "fields", "DateCreated"},
+		{config.MediaServerEmby, "Movie", "Fields", "DateCreated,ProductionYear"},
+		{config.MediaServerEmby, recentTVTypes, "Fields", "DateCreated,ProductionYear,SeriesId,SeriesName,SeriesPrimaryImage"},
+	} {
+		t.Run(string(test.serverType)+"/"+test.itemTypes, func(t *testing.T) {
+			provider, err := newProvider(test.serverType)
+			if err != nil {
+				t.Fatal(err)
+			}
+			u, err := url.Parse(provider.LatestItemsPath("member", test.itemTypes, 100))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := u.Query().Get(test.fieldKey); got != test.wantFields {
+				t.Fatalf("unsupported or missing latest fields: got %q, want %q", got, test.wantFields)
+			}
+		})
+	}
+}
+
 func TestProviderVirtualFolderRoutesAreProviderSpecific(t *testing.T) {
 	jellyfin, _ := newProvider(config.MediaServerJellyfin)
 	emby, _ := newProvider(config.MediaServerEmby)

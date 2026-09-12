@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -333,22 +334,23 @@ func (c *Client) UpcomingWindow(ctx context.Context, start, end time.Time, limit
 	}
 	out := make([]dashboard.CalendarItem, 0, len(rows))
 	for _, row := range rows {
-		airsAt := calendarTime(row)
-		item := dashboard.CalendarItem{
-			Title:        calendarTitle(row),
-			Subtitle:     calendarSubtitle(row),
-			Kind:         queueKind(row, c.name),
-			Source:       c.name,
-			AirsAt:       airsAt,
-			Availability: calendarAvailability(row, airsAt),
+		for _, release := range calendarReleases(row, start, end) {
+			item := dashboard.CalendarItem{
+				Title: calendarTitle(row), Subtitle: calendarSubtitle(row),
+				Kind: queueKind(row, c.name), Source: c.name, AirsAt: release.at,
+				Availability: calendarAvailability(row, release.at),
+			}
+			if release.label != "" {
+				item.Subtitle = release.label
+			}
+			if item.Title != "" {
+				out = append(out, item)
+			}
 		}
-		if item.Title == "" || item.AirsAt.IsZero() {
-			continue
-		}
-		out = append(out, item)
-		if limit > 0 && len(out) >= limit {
-			break
-		}
+	}
+	sort.SliceStable(out, func(i, j int) bool { return out[i].AirsAt.Before(out[j].AirsAt) })
+	if limit > 0 && len(out) > limit {
+		out = out[:limit]
 	}
 	return out, nil
 }
@@ -384,15 +386,27 @@ func calendarSubtitle(row map[string]any) string {
 	return firstString(row, "title")
 }
 
-func calendarTime(row map[string]any) time.Time {
-	for _, field := range []string{"airDateUtc", "inCinemas", "digitalRelease", "physicalRelease"} {
-		if s := firstString(row, field); s != "" {
-			if t, err := time.Parse(time.RFC3339, s); err == nil {
-				return t
-			}
+type calendarRelease struct {
+	at    time.Time
+	label string
+}
+
+func calendarReleases(row map[string]any, start, end time.Time) []calendarRelease {
+	var releases []calendarRelease
+	for _, field := range []struct{ key, label string }{
+		{"airDateUtc", ""}, {"inCinemas", "In cinemas"},
+		{"digitalRelease", "Digital release"}, {"physicalRelease", "Physical release"},
+	} {
+		raw := firstString(row, field.key)
+		at, err := time.Parse(time.RFC3339, raw)
+		if err != nil {
+			at, err = time.Parse("2006-01-02", raw)
+		}
+		if err == nil && !at.Before(start) && at.Before(end) {
+			releases = append(releases, calendarRelease{at, field.label})
 		}
 	}
-	return time.Time{}
+	return releases
 }
 
 func calendarAvailability(row map[string]any, airsAt time.Time) string {

@@ -67,10 +67,6 @@ type userDTO struct {
 	Email            string `json:"email"`
 }
 
-type userListDTO struct {
-	Results []userDTO `json:"results"`
-}
-
 type createdRequestDTO struct {
 	ID     int `json:"id"`
 	Status int `json:"status"`

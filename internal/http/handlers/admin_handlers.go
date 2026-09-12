@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -19,10 +20,9 @@ import (
 func (h *Handlers) Admin(w http.ResponseWriter, r *http.Request) {
 	u, _ := middleware.UserFromContext(r.Context())
 	mediaName := h.cfg.MediaServerType.Label()
-	mediaStat := h.cachedHealth(r, "admin:health:media_server", h.mediaserver)
-	sStat := h.cachedHealth(r, "admin:health:seerr", h.seerr)
 	arrServices := h.arrAdminServices()
-	arrHealth := h.arrHealthStatuses(r, arrServices)
+	snapshot := h.loadAdminSnapshot(r, arrServices)
+	mediaStat, sStat, arrHealth := snapshot.mediaHealth, snapshot.seerrHealth, snapshot.arrHealth
 	mediaStatus := boolToStatus(mediaStat.OK)
 	sStatus := boolToStatus(sStat.OK)
 	view := ViewData{
@@ -60,7 +60,7 @@ func (h *Handlers) Admin(w http.ResponseWriter, r *http.Request) {
 	}
 	view.AdminOverviewSummary = adminOverviewSummary(view, services)
 	view.AdminStatusRows = adminStatusRows(services, view.DatabaseStatus, view.AppVersion)
-	view.AdminActionItems = adminActionItems(view.DatabaseStatus, services, view.ConfigWarnings, view.WarningLogCount, h.adminOperationalWarnings(r, arrServices))
+	view.AdminActionItems = adminActionItems(view.DatabaseStatus, services, view.ConfigWarnings, view.WarningLogCount, adminOperationalWarnings(arrServices, snapshot.arrSummaries))
 	h.render(w, "admin_overview.html", view)
 }
 
@@ -108,28 +108,29 @@ func (h *Handlers) AdminPlayback(w http.ResponseWriter, r *http.Request) {
 		User:            u,
 		MediaServerName: h.cfg.MediaServerType.Label(),
 	}
-	if summary, ok := h.cachedMediaServerAdminSummary(r); ok {
-		view.Playback = playbackSessionViews(summary.ActivePlaybacks)
-	}
+	sessions, err := cacheLoadJSON(h, r.Context(), "admin:playback", cacheTTLHealth, func() ([]mediaserver.PlaybackSession, error) {
+		return h.mediaserver.ActivePlayback(r.Context())
+	})
+	view.PlaybackUnavailable = err != nil
+	view.Playback = playbackSessionViews(sessions)
 	h.render(w, "admin_playback.html", view)
 }
 
 func (h *Handlers) AdminIntegrations(w http.ResponseWriter, r *http.Request) {
 	u, _ := middleware.UserFromContext(r.Context())
 	settings := readSettings(r, h.db, settingAppName, settingMediaServerPublicURL, settingSeerrPublicURL)
-	j := h.cachedHealth(r, "admin:health:media_server", h.mediaserver)
-	s := h.cachedHealth(r, "admin:health:seerr", h.seerr)
 	seerrConfigured := h.seerrConfigured()
 	arrServices := h.arrAdminServices()
-	arrHealth := h.arrHealthStatuses(r, arrServices)
+	snapshot := h.loadAdminSnapshot(r, arrServices)
+	j, s, arrHealth := snapshot.mediaHealth, snapshot.seerrHealth, snapshot.arrHealth
 
 	view := ViewData{AppName: appNameFromSettings(settings, h.cfg.AppName), CSRFToken: middleware.EnsureCSRFToken(w, r, h.cfg.CookieSecure), Now: time.Now(), User: u, MediaServerName: h.cfg.MediaServerType.Label()}
 	view.ServiceStatuses = []ServiceStatus{
-		h.mediaserverServiceStatus(r, withDefault(readSettingFromMap(settings, settingMediaServerPublicURL), h.cfg.MediaServerPublicURL), j),
+		h.mediaserverServiceStatus(r, withDefault(readSettingFromMap(settings, settingMediaServerPublicURL), h.cfg.MediaServerPublicURL), j, snapshot.mediaSummary),
 		{Name: "Seerr", Internal: security.RedactURL(h.cfg.SeerrURL), Public: security.RedactURL(withDefault(readSettingFromMap(settings, settingSeerrPublicURL), h.cfg.SeerrPublicURL)), Health: integrationHealthStatus(seerrConfigured, s.OK), Configured: seerrConfigured, LastError: healthErr(s), RecentErrors: h.serviceErrorHistory(r, "Seerr", 3)},
 	}
 	for _, svc := range arrServices {
-		view.ServiceStatuses = append(view.ServiceStatuses, h.arrServiceStatus(r, svc, arrHealth[svc.Name]))
+		view.ServiceStatuses = append(view.ServiceStatuses, h.arrServiceStatus(r, svc, arrHealth[svc.Name], snapshot.arrSummaries[svc.Name]))
 	}
 	for _, service := range view.ServiceStatuses {
 		if !service.Configured {
@@ -143,44 +144,27 @@ func (h *Handlers) AdminIntegrations(w http.ResponseWriter, r *http.Request) {
 type arrAdminService struct {
 	Name       string
 	Internal   string
-	APIKey     string
-	CacheKey   string
 	Client     *arr.Client
 	Configured bool
 }
 
 func (h *Handlers) arrAdminServices() []arrAdminService {
 	return []arrAdminService{
-		{Name: "Sonarr", Internal: h.cfg.SonarrURL, APIKey: h.cfg.SonarrAPIKey, CacheKey: "admin:health:sonarr", Client: h.sonarr, Configured: h.cfg.SonarrURL != "" && h.cfg.SonarrAPIKey != ""},
-		{Name: "Radarr", Internal: h.cfg.RadarrURL, APIKey: h.cfg.RadarrAPIKey, CacheKey: "admin:health:radarr", Client: h.radarr, Configured: h.cfg.RadarrURL != "" && h.cfg.RadarrAPIKey != ""},
-		{Name: "Prowlarr", Internal: h.cfg.ProwlarrURL, APIKey: h.cfg.ProwlarrAPIKey, CacheKey: "admin:health:prowlarr", Client: h.prowlarr, Configured: h.cfg.ProwlarrURL != "" && h.cfg.ProwlarrAPIKey != ""},
+		{Name: "Sonarr", Internal: h.cfg.SonarrURL, Client: h.sonarr, Configured: h.cfg.SonarrURL != "" && h.cfg.SonarrAPIKey != ""},
+		{Name: "Radarr", Internal: h.cfg.RadarrURL, Client: h.radarr, Configured: h.cfg.RadarrURL != "" && h.cfg.RadarrAPIKey != ""},
+		{Name: "Prowlarr", Internal: h.cfg.ProwlarrURL, Client: h.prowlarr, Configured: h.cfg.ProwlarrURL != "" && h.cfg.ProwlarrAPIKey != ""},
 	}
 }
 
 func (h *Handlers) mediaServerConfigured() bool {
-	return h.cfg.MediaServerURL != "" && h.cfg.MediaServerPublicURL != "" && h.cfg.MediaServerAPIKey != ""
+	return h.cfg.MediaServerURL != "" && h.cfg.MediaServerAPIKey != ""
 }
 
 func (h *Handlers) seerrConfigured() bool {
-	return h.cfg.SeerrURL != "" && h.cfg.SeerrPublicURL != "" && h.cfg.SeerrAPIKey != ""
+	return h.cfg.SeerrURL != "" && h.cfg.SeerrAPIKey != ""
 }
 
-func (h *Handlers) arrHealthStatuses(r *http.Request, services []arrAdminService) map[string]integrations.HealthStatus {
-	out := make(map[string]integrations.HealthStatus, len(services))
-	for _, svc := range services {
-		out[svc.Name] = h.cachedHealthIfConfigured(r, svc)
-	}
-	return out
-}
-
-func (h *Handlers) cachedHealthIfConfigured(r *http.Request, svc arrAdminService) integrations.HealthStatus {
-	if !svc.Configured || svc.Client == nil {
-		return integrations.HealthStatus{OK: false, Message: "not configured"}
-	}
-	return h.cachedHealth(r, svc.CacheKey, svc.Client)
-}
-
-func (h *Handlers) mediaserverServiceStatus(r *http.Request, publicURL string, health integrations.HealthStatus) ServiceStatus {
+func (h *Handlers) mediaserverServiceStatus(r *http.Request, publicURL string, health integrations.HealthStatus, summary *mediaserver.AdminSummary) ServiceStatus {
 	name := h.cfg.MediaServerType.Label()
 	configured := h.mediaServerConfigured()
 	status := ServiceStatus{
@@ -193,8 +177,7 @@ func (h *Handlers) mediaserverServiceStatus(r *http.Request, publicURL string, h
 		LastError:    healthErr(health),
 		RecentErrors: h.serviceErrorHistory(r, name, 3),
 	}
-	summary, ok := h.cachedMediaServerAdminSummary(r)
-	if !ok {
+	if summary == nil {
 		return status
 	}
 	status.Version = summary.Version
@@ -212,7 +195,7 @@ func (h *Handlers) mediaserverServiceStatus(r *http.Request, publicURL string, h
 	return status
 }
 
-func (h *Handlers) arrServiceStatus(r *http.Request, svc arrAdminService, health integrations.HealthStatus) ServiceStatus {
+func (h *Handlers) arrServiceStatus(r *http.Request, svc arrAdminService, health integrations.HealthStatus, summary *arr.AdminSummary) ServiceStatus {
 	status := ServiceStatus{
 		Name:         svc.Name,
 		Internal:     security.RedactURL(svc.Internal),
@@ -222,8 +205,7 @@ func (h *Handlers) arrServiceStatus(r *http.Request, svc arrAdminService, health
 		LastError:    healthErr(health),
 		RecentErrors: h.serviceErrorHistory(r, svc.Name, 3),
 	}
-	summary, ok := h.cachedArrAdminSummary(r, svc)
-	if !ok {
+	if summary == nil {
 		return status
 	}
 	status.Version = summary.Version
@@ -237,11 +219,11 @@ func (h *Handlers) arrServiceStatus(r *http.Request, svc arrAdminService, health
 	return status
 }
 
-func (h *Handlers) adminOperationalWarnings(r *http.Request, services []arrAdminService) []adminOperationalWarning {
+func adminOperationalWarnings(services []arrAdminService, summaries map[string]*arr.AdminSummary) []adminOperationalWarning {
 	warnings := make([]adminOperationalWarning, 0)
 	for _, svc := range services {
-		summary, ok := h.cachedArrAdminSummary(r, svc)
-		if !ok {
+		summary := summaries[svc.Name]
+		if summary == nil {
 			continue
 		}
 		if len(summary.HealthIssues) > 0 {
@@ -312,6 +294,54 @@ func playbackSessionViews(rows []mediaserver.PlaybackSession) []AdminPlaybackSes
 			DeviceName: row.DeviceName,
 			MediaType:  row.MediaType,
 		})
+	}
+	return out
+}
+
+// One bounded load per admin page. The summary's system-info request is also
+// its health check, so unavailable services are never probed twice in sequence.
+type adminSnapshot struct {
+	mediaHealth, seerrHealth integrations.HealthStatus
+	mediaSummary             *mediaserver.AdminSummary
+	arrHealth                map[string]integrations.HealthStatus
+	arrSummaries             map[string]*arr.AdminSummary
+}
+
+func (h *Handlers) loadAdminSnapshot(r *http.Request, services []arrAdminService) adminSnapshot {
+	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	defer cancel()
+	r = r.WithContext(ctx)
+	out := adminSnapshot{arrHealth: make(map[string]integrations.HealthStatus), arrSummaries: make(map[string]*arr.AdminSummary)}
+	summaries := make([]*arr.AdminSummary, len(services))
+	tasks := []func(){
+		func() {
+			summary, ok := h.cachedMediaServerAdminSummary(r)
+			out.mediaHealth = integrations.HealthStatus{OK: ok}
+			if ok {
+				out.mediaSummary = &summary
+			} else {
+				out.mediaHealth.Message = "Service details unavailable"
+			}
+		},
+		func() { out.seerrHealth = h.cachedHealth(r, "health:seerr", h.seerr) },
+	}
+	for i, svc := range services {
+		tasks = append(tasks, func() {
+			if summary, ok := h.cachedArrAdminSummary(r, svc); ok {
+				summaries[i] = &summary
+			}
+		})
+	}
+	runConcurrently(tasks...)
+	for i, svc := range services {
+		out.arrSummaries[svc.Name] = summaries[i]
+		message := "Service details unavailable"
+		if !svc.Configured {
+			message = "not configured"
+		} else if summaries[i] != nil {
+			message = "Online"
+		}
+		out.arrHealth[svc.Name] = integrations.HealthStatus{OK: summaries[i] != nil, Message: message}
 	}
 	return out
 }

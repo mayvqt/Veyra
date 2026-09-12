@@ -9,7 +9,7 @@
 <body>
   <main class="app-shell">
     <div class="topbar">
-      <div class="brand">{{ .AppName }}</div>
+      {{ template "brand" . }}
       <div class="topbar-right">
         <nav class="topnav" aria-label="Admin navigation">
           <a class="nav-link" href="/dashboard">Dashboard</a>
