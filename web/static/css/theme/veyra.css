@@ -830,7 +830,7 @@ textarea:focus {
 
   body:not(.auth-page) .topbar {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     gap: 0.5rem;
     min-height: 0;
@@ -840,32 +840,22 @@ textarea:focus {
   body:not(.auth-page) .topbar-right { display: contents; }
 
   body:not(.auth-page) .topnav {
-    grid-column: 2;
-    grid-row: 1;
+    grid-column: 1 / -1;
+    grid-row: 2;
     min-width: 0;
     width: auto;
-    overflow-x: auto;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
+    overflow: visible;
     margin: 0;
     padding: 0.2rem;
-    scrollbar-width: none;
   }
 
-  body:not(.auth-page) .topnav::-webkit-scrollbar { display: none; }
-
-  body:not(.auth-page) [aria-label="Admin navigation"] {
-    scrollbar-width: thin;
-  }
-
-  body:not(.auth-page) [aria-label="Admin navigation"]::-webkit-scrollbar {
-    display: block;
-    height: 4px;
-  }
-
+  body:not(.auth-page) .brand { min-width: 0; overflow-wrap: anywhere; }
+  body:not(.auth-page) .brand::before { flex-shrink: 0; }
   body:not(.auth-page) .nav-link { flex: 0 0 auto; }
 
   body:not(.auth-page) .topbar-logout {
-    grid-column: 3;
+    grid-column: 2;
     grid-row: 1;
   }
 
@@ -877,13 +867,6 @@ textarea:focus {
 
   .dashboard-rail .rail-links { display: none; }
 
-}
-
-@media (max-width: 520px) {
-  body:not(.auth-page) .topbar { grid-template-columns: minmax(0, auto) minmax(0, 1fr) auto; }
-  body:not(.auth-page) .brand { max-width: 6.5rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  body:not(.auth-page) .topbar-logout .btn { min-width: 2.6rem; font-size: 0; }
-  body:not(.auth-page) .topbar-logout .btn::after { content: "Exit"; font-size: 0.72rem; }
 }
 
 @media (max-width: 640px) {
