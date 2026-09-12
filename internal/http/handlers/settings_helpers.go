@@ -134,7 +134,6 @@ func (h *Handlers) configWarnings() []string {
 	)
 	w = appendPartialConnectorWarnings(w, "Seerr",
 		configField{Name: "SEERR_URL", Value: h.cfg.SeerrURL},
-		configField{Name: "SEERR_PUBLIC_URL", Value: h.cfg.SeerrPublicURL},
 		configField{Name: "SEERR_API_KEY", Value: h.cfg.SeerrAPIKey},
 	)
 	w = appendPartialConnectorWarnings(w, "Sonarr",
@@ -219,10 +218,10 @@ func validateSettingsInput(pairs map[string]string) string {
 	if !hexColorRe.MatchString(pairs[settingAppAccentColor]) {
 		return "Accent color must be a valid hex color like #d43f24"
 	}
-	if !isValidURL(pairs[settingMediaServerPublicURL]) {
+	if pairs[settingMediaServerPublicURL] != "" && !isValidURL(pairs[settingMediaServerPublicURL]) {
 		return "Media server public URL must be a valid http or https URL"
 	}
-	if !isValidURL(pairs[settingSeerrPublicURL]) {
+	if pairs[settingSeerrPublicURL] != "" && !isValidURL(pairs[settingSeerrPublicURL]) {
 		return "Seerr public URL must be a valid http or https URL"
 	}
 	if len(pairs[settingDashboardMessage]) > 280 {

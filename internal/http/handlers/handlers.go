@@ -36,7 +36,9 @@ type Handlers struct {
 	loginLimiter interface {
 		Allow(ip, username string) bool
 	}
-	cacheLocks sync.Map
+	cacheNamespace string
+	cacheMu        sync.Mutex
+	cacheLoads     map[string]*cacheLoad
 }
 
 type seerrIntegration interface {
@@ -45,14 +47,13 @@ type seerrIntegration interface {
 	CreateRequest(ctx context.Context, in seerr.CreateRequestInput) (seerr.CreatedRequest, error)
 	RecentRequestsForUser(ctx context.Context, user seerr.UserIdentity, limit int) ([]dashboard.RequestItem, error)
 	UserQuotaForUser(ctx context.Context, user seerr.UserIdentity) (*seerr.Quota, error)
-	ResolveUser(ctx context.Context, username, displayName string) (*seerr.UserIdentity, error)
 	ResolveUserByMediaServerID(ctx context.Context, mediaserverUserID string) (*seerr.UserIdentity, error)
 }
 
 func New(cfg config.Config, log *slog.Logger, db *sql.DB, tmpl *template.Template, authSvc *auth.Service, mediaserver *mediaserver.Client, seerr *seerr.Client, sonarr *arr.Client, radarr *arr.Client, prowlarr *arr.Client, loginLimiter interface {
 	Allow(ip, username string) bool
 }) *Handlers {
-	return &Handlers{cfg: cfg, log: log, db: db, tmpl: tmpl, authSvc: authSvc, mediaserver: mediaserver, seerr: seerr, sonarr: sonarr, radarr: radarr, prowlarr: prowlarr, restart: defaultRestart, loginLimiter: loginLimiter}
+	return &Handlers{cfg: cfg, log: log, db: db, tmpl: tmpl, authSvc: authSvc, mediaserver: mediaserver, seerr: seerr, sonarr: sonarr, radarr: radarr, prowlarr: prowlarr, restart: defaultRestart, loginLimiter: loginLimiter, cacheNamespace: integrationCacheNamespace(cfg)}
 }
 
 type ServiceStatus struct {
@@ -205,7 +206,11 @@ type ViewData struct {
 	ProwlarrStatus            string
 	RecentlyAdded             []dashboard.MediaItem
 	RecentRequests            []dashboard.RequestItem
+	RecentRequestsNote        string
+	RequestAccessNote         string
 	DownloadQueue             []dashboard.QueueItem
+	QueueNote                 string
+	CalendarNote              string
 	UpcomingCalendar          []dashboard.CalendarItem
 	UpcomingCalendarGroups    []CalendarGroup
 	CalendarWeekOffset        int
@@ -224,6 +229,8 @@ type ViewData struct {
 	SeerrPublicURL            string
 	MediaServerPublicURL      string
 	BrandAppName              string
+	LogoURL                   string
+	AccentStyle               template.CSS
 	BrandLogoURL              string
 	BrandAccent               string
 	SettingsShowRequestBot    bool
@@ -238,6 +245,7 @@ type ViewData struct {
 	ServiceStatuses           []ServiceStatus
 	HasUnconfiguredServices   bool
 	Playback                  []AdminPlaybackSession
+	PlaybackUnavailable       bool
 	Users                     []AdminUserView
 	AuditLogs                 []AuditLogView
 	AppVersion                string
@@ -270,6 +278,7 @@ const (
 )
 
 func (h *Handlers) render(w http.ResponseWriter, name string, data ViewData) {
+	h.applyBranding(w, &data)
 	if data.StaticVersion == "" {
 		data.StaticVersion = veyra.StaticVersion()
 	}
@@ -304,15 +313,6 @@ func (h *Handlers) cachedHealth(r *http.Request, key string, client integrations
 		return client.Health(r.Context()), nil
 	})
 	return status
-}
-
-func (h *Handlers) cacheLock(key string) *sync.Mutex {
-	if v, ok := h.cacheLocks.Load(key); ok {
-		return v.(*sync.Mutex)
-	}
-	mu := &sync.Mutex{}
-	actual, _ := h.cacheLocks.LoadOrStore(key, mu)
-	return actual.(*sync.Mutex)
 }
 
 func (h *Handlers) Health(w http.ResponseWriter, r *http.Request) {

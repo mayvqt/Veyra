@@ -13,7 +13,7 @@ administrator policy controls Veyra admin access. Session policy is refreshed on
 requests after 15 minutes; a definitive upstream 401/403 revokes the Veyra session.
 During temporary upstream failures, administrator access is denied, while member
 sessions retain their existing expiry. Seerr access requires an explicit
-media-server user link; matching account names are not proof of identity.
+media-server user link; matching account names are not proof of identity. Integration caches are scoped to their upstream configuration. A change of media-server type or internal URL revokes existing sessions before accepting requests, including changes supplied through the environment.
 
 ## Secret handling
 

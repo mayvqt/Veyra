@@ -34,3 +34,5 @@ preserve the failed state for diagnosis, restore the matching pre-upgrade databa
 without stale WAL/SHM files, and run the previous immutable image. Repairs that
 change users, settings, sessions, audit records, or cache state must be explicit
 operator actions.
+
+The first upgrade that records authentication origin requires users to sign in again. Later media-server type or internal URL changes also revoke sessions; Seerr-only and presentation changes preserve them. User and audit history remain intact.

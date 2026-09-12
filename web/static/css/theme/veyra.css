@@ -895,3 +895,6 @@ textarea:focus {
     min-height: auto;
   }
 }
+
+.brand-custom::before { display: none; }
+.brand-logo { width: 2rem; height: 2rem; object-fit: contain; flex-shrink: 0; }

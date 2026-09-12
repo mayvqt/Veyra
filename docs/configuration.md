@@ -20,3 +20,14 @@ Environment variables override wizard values. Internal URLs must be container-re
 Every configured optional service URL requires its API key.
 
 Service URLs must use HTTP or HTTPS and cannot contain URL userinfo, query parameters, or fragments. Keep credentials in the dedicated API key variables; this prevents them from being copied into request logs, diagnostics, browser pages, or `Referer` headers.
+
+Public links are optional, including in Dashboard settings. A media-only setup
+hides request widgets; queue and calendar appear when Sonarr or Radarr is configured.
+Changing the media-server type or internal URL signs everyone out, including when
+changed through the environment. The first upgrade with origin-aware sessions also
+requires a fresh login. Changing Seerr, public links, or branding preserves logins.
+
+See [Integrations](integrations.md) for account linking, request eligibility, and dashboard data.
+
+Dashboard settings apply the app name, logo, and accent throughout the interface.
+A remote logo is loaded directly by the browser without a referrer.

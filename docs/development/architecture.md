@@ -33,7 +33,7 @@ redaction, and the rule that a name or email match cannot link a Seerr account.
 
 SQLite runs in WAL mode with one open connection and a busy timeout. Maintenance
 expires sessions and cache entries and checkpoints the WAL. Dashboard handlers
-fetch independent providers concurrently and may return partial results. Auth
+fetch configured independent providers concurrently and label partial results. Cache loads coalesce concurrent failures as well as successes; bounded stale data never authorizes an unlinked identity. Auth
 refreshes administrator status on an interval and fails closed for admin access.
 Keep concurrent results deterministic, bound fan-out and timeouts, isolate
 provider failure, and honor request cancellation.

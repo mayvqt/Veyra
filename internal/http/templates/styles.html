@@ -1,4 +1,7 @@
 {{ define "styles" -}}
 <link rel="icon" href="/static/veyra-mark.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/static/app.css?v={{ .StaticVersion }}">
+{{ if .AccentStyle }}<style>{{ .AccentStyle }}</style>{{ end }}
 {{- end }}
+
+{{ define "brand" }}<div class="brand{{ if .LogoURL }} brand-custom{{ end }}">{{ if .LogoURL }}<img src="{{ .LogoURL }}" alt="" class="brand-logo" referrerpolicy="no-referrer">{{ end }}{{ .AppName }}</div>{{ end }}

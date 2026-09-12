@@ -60,10 +60,23 @@ func (h *Handlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 		view.SessionUserAgent = sess.UserAgent
 	}
 
+	seerrConfigured := strings.TrimSpace(h.cfg.SeerrURL) != "" && strings.TrimSpace(h.cfg.SeerrAPIKey) != ""
+	view.SettingsShowRequestBot = view.SettingsShowRequestBot && seerrConfigured
+	view.SettingsShowRecentReqs = view.SettingsShowRecentReqs && seerrConfigured
+	view.SettingsShowQuota = view.SettingsShowQuota && seerrConfigured
+	arrConfigured := h.sonarrConfigured() || h.radarrConfigured()
+	view.SettingsShowQueue = view.SettingsShowQueue && arrConfigured
+	view.SettingsShowCalendar = view.SettingsShowCalendar && arrConfigured
 	var seerrUser seerr.UserIdentity
-	needsSeerrUser := view.SettingsShowRecentReqs || view.SettingsShowQuota
-	if needsSeerrUser {
-		seerrUser = h.resolveSeerrUser(r, u)
+	var identityErr error
+	if view.SettingsShowRequestBot || view.SettingsShowRecentReqs || view.SettingsShowQuota {
+		seerrUser, identityErr = h.resolveSeerrUser(r, u)
+		if identityErr != nil {
+			view.RequestAccessNote = "Request details are unavailable right now. Try again shortly."
+			if errors.Is(identityErr, seerr.ErrUserNotLinked) {
+				view.RequestAccessNote = "Link your " + view.MediaServerName + " account in Seerr to request media and see your requests."
+			}
+		}
 	}
 
 	var (
@@ -73,12 +86,15 @@ func (h *Handlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 		recentlyAdded          []dashboard.MediaItem
 		recentMediaUnavailable bool
 
-		recentRequests []dashboard.RequestItem
+		recentRequests     []dashboard.RequestItem
+		recentRequestsNote = "No requests yet."
 
 		quota     quotaDisplay
 		quotaNote = view.QuotaNote
 
 		downloadQueue []dashboard.QueueItem
+		queueNote     string
+		calendarNote  string
 
 		calendarWeekOffset int
 		calendarWeekLabel  string
@@ -119,9 +135,11 @@ func (h *Handlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	if view.SettingsShowRecentReqs {
+	if view.SettingsShowRecentReqs && identityErr != nil {
+		recentRequestsNote = view.RequestAccessNote
+	} else if view.SettingsShowRecentReqs {
 		loaders = append(loaders, func() {
-			cacheKey := "requests:recent:v2:" + seerrUserCacheKey(seerrUser, u)
+			cacheKey := fmt.Sprintf("requests:recent:user:%d", seerrUser.ID)
 			if reqs, stale, err := cacheLoadJSONWithStale(h, r.Context(), cacheKey, cacheTTLWidget, cacheMaxStaleWidget, func() ([]dashboard.RequestItem, error) {
 				return h.seerr.RecentRequestsForUser(r.Context(), seerrUser, 5)
 			}); err == nil {
@@ -129,13 +147,17 @@ func (h *Handlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 				if stale {
 					staleData.Store(true)
 				}
+			} else {
+				recentRequestsNote = "Recent requests are unavailable right now. Try again shortly."
 			}
 		})
 	}
 
-	if view.SettingsShowQuota {
+	if view.SettingsShowQuota && identityErr != nil {
+		quotaNote = view.RequestAccessNote
+	} else if view.SettingsShowQuota {
 		loaders = append(loaders, func() {
-			cacheKey := "requests:quota:" + seerrUserCacheKey(seerrUser, u)
+			cacheKey := fmt.Sprintf("requests:quota:user:%d", seerrUser.ID)
 			q, stale, err := cacheLoadJSONWithStale(h, r.Context(), cacheKey, cacheTTLWidget, cacheMaxStaleWidget, func() (seerr.Quota, error) {
 				qq, err := h.seerr.UserQuotaForUser(r.Context(), seerrUser)
 				if err != nil {
@@ -154,9 +176,7 @@ func (h *Handlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 				}
 				return
 			}
-			if seerrUser.ID == 0 {
-				quotaNote = "Link this " + view.MediaServerName + " user in Seerr to view request limits."
-			}
+			quotaNote = "Request limits are unavailable right now. Try again shortly."
 		})
 	} else {
 		quotaNote = ""
@@ -166,9 +186,13 @@ func (h *Handlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 		loaders = append(loaders, func() {
 			cacheKey := "downloads:queue"
 			var stale bool
-			downloadQueue, stale, _ = cacheLoadJSONWithStale(h, r.Context(), cacheKey, cacheTTLHealth, cacheMaxStaleWidget, func() ([]dashboard.QueueItem, error) {
+			var err error
+			downloadQueue, stale, err = cacheLoadJSONWithStale(h, r.Context(), cacheKey, cacheTTLHealth, cacheMaxStaleWidget, func() ([]dashboard.QueueItem, error) {
 				return h.combinedDownloadQueue(r.Context(), 0)
 			})
+			if err != nil {
+				queueNote = providerUnavailableNote("Download queue", err)
+			}
 			if stale {
 				staleData.Store(true)
 			}
@@ -188,7 +212,11 @@ func (h *Handlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 
 		loaders = append(loaders, func() {
 			var stale bool
-			upcomingCalendar, stale = h.loadUpcomingCalendarWeek(r.Context(), weekStart, weekEnd)
+			var err error
+			upcomingCalendar, stale, err = h.loadUpcomingCalendarWeek(r.Context(), weekStart, weekEnd)
+			if err != nil {
+				calendarNote = providerUnavailableNote("Calendar", err)
+			}
 			if stale {
 				staleData.Store(true)
 			}
@@ -210,16 +238,19 @@ func (h *Handlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 	view.DashboardDataStale = staleData.Load()
 	view.RecentMediaUnavailable = recentMediaUnavailable
 	view.RecentRequests = recentRequests
+	view.RecentRequestsNote = recentRequestsNote
 	view.QuotaValue = quota.Value
 	view.QuotaMeters = quota.Meters
 	view.QuotaNote = quotaNote
 	view.DownloadQueue = downloadQueue
+	view.QueueNote = queueNote
+	view.CalendarNote = calendarNote
 	view.CalendarWeekOffset = calendarWeekOffset
 	view.CalendarWeekLabel = calendarWeekLabel
 	view.CalendarPrevURL = calendarPrevURL
 	view.CalendarNextURL = calendarNextURL
 	view.UpcomingCalendar = upcomingCalendar
-	if view.SettingsShowCalendar {
+	if view.SettingsShowCalendar && (calendarNote == "" || len(upcomingCalendar) > 0) {
 		view.UpcomingCalendarGroups = groupCalendarItems(view.UpcomingCalendar, calendarWeekStart)
 	}
 
@@ -256,7 +287,14 @@ func runConcurrently(tasks ...func()) {
 }
 
 func (h *Handlers) combinedDownloadQueue(ctx context.Context, limit int) ([]dashboard.QueueItem, error) {
-	return combineDownloadQueue(ctx, h.debug, limit, h.sonarr, h.radarr)
+	var clients []downloadQueueClient
+	if h.sonarrConfigured() {
+		clients = append(clients, h.sonarr)
+	}
+	if h.radarrConfigured() {
+		clients = append(clients, h.radarr)
+	}
+	return combineDownloadQueue(ctx, h.debug, limit, clients...)
 }
 
 type downloadQueueClient interface {
@@ -278,15 +316,12 @@ func combineDownloadQueue(ctx context.Context, debug func(string, ...any), limit
 	out, err := collectProviderItems(loads, func(name string, err error) {
 		debug("download queue unavailable", "service", name, "err", security.RedactErr(err))
 	})
-	if err != nil {
-		return nil, fmt.Errorf("all download queue providers failed: %w", err)
-	}
 	sortDownloadQueueItems(out)
 	if limit > 0 && len(out) > limit {
 		out = out[:limit]
 	}
 	debug("download queue combined", "total", len(out), "limit", limit)
-	return out, nil
+	return out, err
 }
 
 func sortDownloadQueueItems(out []dashboard.QueueItem) {
@@ -311,7 +346,14 @@ func sortDownloadQueueItems(out []dashboard.QueueItem) {
 }
 
 func (h *Handlers) combinedUpcomingCalendar(ctx context.Context, start, end time.Time, limit int) ([]dashboard.CalendarItem, error) {
-	return combineUpcomingCalendar(ctx, h.debug, start, end, limit, h.sonarr, h.radarr)
+	var clients []upcomingCalendarClient
+	if h.sonarrConfigured() {
+		clients = append(clients, h.sonarr)
+	}
+	if h.radarrConfigured() {
+		clients = append(clients, h.radarr)
+	}
+	return combineUpcomingCalendar(ctx, h.debug, start, end, limit, clients...)
 }
 
 type upcomingCalendarClient interface {
@@ -333,11 +375,8 @@ func combineUpcomingCalendar(ctx context.Context, debug func(string, ...any), st
 	out, err := collectProviderItems(loads, func(name string, err error) {
 		debug("calendar unavailable", "service", name, "err", security.RedactErr(err))
 	})
-	if err != nil {
-		return nil, fmt.Errorf("all calendar providers failed: %w", err)
-	}
 	sortCalendarItems(out)
-	return limitCalendarItems(out, limit), nil
+	return limitCalendarItems(out, limit), err
 }
 
 type providerLoad[T any] struct {
@@ -389,18 +428,31 @@ func collectProviderItems[T any](loads []providerLoad[T], onFailure func(string,
 		}()
 	}
 	wg.Wait()
-	if succeeded == 0 {
+	if len(failures) > 0 {
+		if succeeded > 0 {
+			return out, &partialProviderError{errors.Join(failures...)}
+		}
 		return nil, errors.Join(failures...)
 	}
 	return out, nil
 }
 
-func (h *Handlers) loadUpcomingCalendarWeek(ctx context.Context, start, end time.Time) ([]dashboard.CalendarItem, bool) {
+type partialProviderError struct{ error }
+
+func providerUnavailableNote(widget string, err error) string {
+	var partial *partialProviderError
+	if errors.As(err, &partial) {
+		return widget + " is incomplete because a service is unavailable. Try again shortly."
+	}
+	return widget + " is unavailable right now. Try again shortly."
+}
+
+func (h *Handlers) loadUpcomingCalendarWeek(ctx context.Context, start, end time.Time) ([]dashboard.CalendarItem, bool, error) {
 	cacheKey := "calendar:upcoming:" + start.Format("2006-01-02")
-	items, stale, _ := cacheLoadJSONWithStale(h, ctx, cacheKey, cacheTTLCalendar, cacheMaxStaleWidget, func() ([]dashboard.CalendarItem, error) {
+	items, stale, err := cacheLoadJSONWithStale(h, ctx, cacheKey, cacheTTLCalendar, cacheMaxStaleWidget, func() ([]dashboard.CalendarItem, error) {
 		return h.combinedUpcomingCalendar(ctx, start, end, 0)
 	})
-	return items, stale
+	return items, stale, err
 }
 
 func sortCalendarItems(items []dashboard.CalendarItem) {
@@ -482,26 +534,26 @@ func clampCalendarWeekOffset(v, minV, maxV int) int {
 	return v
 }
 
-func (h *Handlers) resolveSeerrUser(r *http.Request, u auth.User) seerr.UserIdentity {
-	var cached seerr.UserIdentity
-	if strings.TrimSpace(u.MediaServerUserID) != "" {
-		cacheKey := "seerr:user:media_server:" + strings.ToLower(u.MediaServerUserID)
-		if cacheGetJSON(r.Context(), h.db, cacheKey, &cached) && cached.ID > 0 {
-			return cached
-		}
-		if resolved, err := h.seerr.ResolveUserByMediaServerID(r.Context(), u.MediaServerUserID); err == nil && resolved != nil && resolved.ID > 0 {
-			h.cacheSetJSON(r.Context(), cacheKey, *resolved, cacheTTLResolvedUser)
-			return *resolved
-		}
+func (h *Handlers) resolveSeerrUser(r *http.Request, u auth.User) (seerr.UserIdentity, error) {
+	mediaID := strings.TrimSpace(u.MediaServerUserID)
+	if mediaID == "" {
+		return seerr.UserIdentity{}, seerr.ErrUserNotLinked
 	}
-	// Names and email local parts are mutable and can belong to another user.
-	// Only the media-server link may authorize access to a Seerr identity.
-	return seerr.UserIdentity{Username: u.Username, DisplayName: u.DisplayName}
+	return cacheLoadJSON(h, r.Context(), "seerr:user:media_server:"+mediaID, cacheTTLResolvedUser, func() (seerr.UserIdentity, error) {
+		resolved, err := h.seerr.ResolveUserByMediaServerID(r.Context(), mediaID)
+		if err != nil {
+			return seerr.UserIdentity{}, err
+		}
+		if resolved == nil || resolved.ID <= 0 {
+			return seerr.UserIdentity{}, seerr.ErrUserNotLinked
+		}
+		return *resolved, nil
+	})
 }
 
-func seerrUserCacheKey(seerrUser seerr.UserIdentity, u auth.User) string {
-	if seerrUser.ID > 0 {
-		return fmt.Sprintf("%d", seerrUser.ID)
-	}
-	return strings.ToLower(u.Username)
+func (h *Handlers) sonarrConfigured() bool {
+	return strings.TrimSpace(h.cfg.SonarrURL) != "" && strings.TrimSpace(h.cfg.SonarrAPIKey) != ""
+}
+func (h *Handlers) radarrConfigured() bool {
+	return strings.TrimSpace(h.cfg.RadarrURL) != "" && strings.TrimSpace(h.cfg.RadarrAPIKey) != ""
 }

@@ -37,7 +37,7 @@
     });
   }
 
-  function renderSearchResult(row, csrfToken) {
+  function renderSearchResult(row) {
     var item = document.createElement("li");
     item.className = "request-bot-result";
 
@@ -130,7 +130,6 @@
     request.disabled = !row.canRequest;
     request.setAttribute("data-media-id", String(row.id || ""));
     request.setAttribute("data-media-type", row.mediaType || "");
-    request.setAttribute("data-csrf", csrfToken || "");
     actions.appendChild(request);
 
     item.appendChild(main);
@@ -143,7 +142,6 @@
     if (!root || root.getAttribute("data-enhanced") === "true") {
       return;
     }
-    root.setAttribute("data-enhanced", "true");
     var form = root.querySelector("[data-seerr-search-form]");
     var query = root.querySelector("[data-seerr-query]");
     var csrf = root.querySelector("[data-seerr-csrf]");
@@ -153,6 +151,7 @@
       return;
     }
 
+    root.setAttribute("data-enhanced", "true");
     var searchSequence = 0;
     var searchController = null;
     form.addEventListener("submit", function (event) {
@@ -191,7 +190,7 @@
         }
         dashboard.setMessage(message, "", "");
         rows.forEach(function (row) {
-          results.appendChild(renderSearchResult(row, csrf ? csrf.value : ""));
+          results.appendChild(renderSearchResult(row));
         });
       }).catch(function (err) {
         if (requestSequence !== searchSequence || err.name === "AbortError") {
@@ -213,7 +212,7 @@
         dashboard.setMessage(message, "Choose a season before requesting.", "error");
         return;
       }
-      body.set("csrf_token", btn.getAttribute("data-csrf") || "");
+      body.set("csrf_token", csrf ? csrf.value : "");
       body.set("media_id", btn.getAttribute("data-media-id") || "");
       body.set("media_type", btn.getAttribute("data-media-type") || "");
       if (seasonChecks.length > 0) {

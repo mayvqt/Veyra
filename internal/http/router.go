@@ -1,11 +1,15 @@
 package http
 
 import (
+	"context"
 	"database/sql"
+	"encoding/json"
 	"html/template"
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 
 	veyra "github.com/mayvqt/veyra"
@@ -17,6 +21,7 @@ import (
 	"github.com/mayvqt/veyra/internal/integrations/mediaserver"
 	"github.com/mayvqt/veyra/internal/integrations/seerr"
 	"github.com/mayvqt/veyra/internal/security"
+	"github.com/mayvqt/veyra/internal/store"
 
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
@@ -25,6 +30,9 @@ import (
 func NewRouter(cfg config.Config, log *slog.Logger, db *sql.DB) (http.Handler, error) {
 	tmpl, err := template.ParseFS(veyra.TemplateFS(), "*.html")
 	if err != nil {
+		return nil, err
+	}
+	if err := store.EnsureAuthOrigin(context.Background(), db, authenticationOrigin(cfg)); err != nil {
 		return nil, err
 	}
 
@@ -84,4 +92,14 @@ func NewRouter(cfg config.Config, log *slog.Logger, db *sql.DB) (http.Handler, e
 	})
 
 	return r, nil
+}
+
+func authenticationOrigin(cfg config.Config) string {
+	base := strings.TrimRight(strings.TrimSpace(cfg.MediaServerURL), "/")
+	if u, err := url.Parse(base); err == nil {
+		u.Scheme, u.Host = strings.ToLower(u.Scheme), strings.ToLower(u.Host)
+		base = u.String()
+	}
+	value, _ := json.Marshal([]string{cfg.MediaServerType.String(), base})
+	return string(value)
 }

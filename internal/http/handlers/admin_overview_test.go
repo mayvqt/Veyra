@@ -65,7 +65,6 @@ func TestConfigWarningsReportPartialOptionalConnectors(t *testing.T) {
 	}}
 	warnings := h.configWarnings()
 	want := []string{
-		"Seerr is partially configured: SEERR_PUBLIC_URL is missing",
 		"Seerr is partially configured: SEERR_API_KEY is missing",
 		"Sonarr is partially configured: SONARR_URL is missing",
 	}

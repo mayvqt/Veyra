@@ -9,7 +9,7 @@
 <body>
   <main class="app-shell">
     <div class="topbar">
-      <div class="brand">{{ .AppName }}</div>
+      {{ template "brand" . }}
       <div class="topbar-right">
         <nav class="topnav" aria-label="Admin navigation">
           <a class="nav-link" href="/dashboard">Dashboard</a>
@@ -90,8 +90,8 @@
               </div>
             </div>
             <div class="form-grid">
-              <label>{{ .MediaServerName }} public URL<input name="media_server_public_url" type="url" inputmode="url" value="{{ .SettingsMediaServerPublic }}" required></label>
-              <label>Seerr public URL<input name="seerr_public_url" type="url" inputmode="url" value="{{ .SettingsSeerrPublic }}" required></label>
+              <label>{{ .MediaServerName }} public URL (optional)<input name="media_server_public_url" type="url" inputmode="url" value="{{ .SettingsMediaServerPublic }}"></label>
+              <label>Seerr public URL (optional)<input name="seerr_public_url" type="url" inputmode="url" value="{{ .SettingsSeerrPublic }}"></label>
             </div>
           </section>
 

@@ -9,7 +9,7 @@
 <body>
   <main class="app-shell">
     <div class="topbar">
-      <div class="brand">{{ .AppName }}</div>
+      {{ template "brand" . }}
       <div class="topbar-right">
         <nav class="topnav" aria-label="Admin navigation">
           <a class="nav-link" href="/dashboard">Dashboard</a>
@@ -40,10 +40,12 @@
         <div class="panel-title-row">
           <div>
             <h2>Sessions</h2>
-            <p class="subtitle">{{ len .Playback }} active {{ if eq (len .Playback) 1 }}session{{ else }}sessions{{ end }}</p>
+            {{ if not .PlaybackUnavailable }}<p class="subtitle">{{ len .Playback }} active {{ if eq (len .Playback) 1 }}session{{ else }}sessions{{ end }}</p>{{ end }}
           </div>
         </div>
-        {{ if .Playback }}
+        {{ if .PlaybackUnavailable }}
+        <p class="subtitle" role="status">Playback sessions are unavailable right now. Check the media server connection and API key.</p>
+        {{ else if .Playback }}
         <ul class="stack playback-list">
           {{ range .Playback }}
           <li class="stack-item playback-row">

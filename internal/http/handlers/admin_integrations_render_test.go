@@ -85,7 +85,7 @@ func TestAdminIntegrationsRendersUnconfiguredOptionalConnectorsCompactly(t *test
 func TestAdminIntegrationsDoesNotRenderActivePlaybackDetails(t *testing.T) {
 	h, db := mkHandlers(t)
 	defer db.Close()
-	cacheSetJSON(context.Background(), db, "admin:summary:media_server", mediaserver.AdminSummary{
+	cacheSetJSON(context.Background(), db, h.cacheKey("admin:summary:media_server"), mediaserver.AdminSummary{
 		ServerName:      "Library",
 		Version:         "10.9.0",
 		OperatingSystem: "Linux",
@@ -114,10 +114,8 @@ func TestAdminIntegrationsDoesNotRenderActivePlaybackDetails(t *testing.T) {
 func TestAdminPlaybackRendersJellyfinActivePlayback(t *testing.T) {
 	h, db := mkHandlers(t)
 	defer db.Close()
-	cacheSetJSON(context.Background(), db, "admin:summary:media_server", mediaserver.AdminSummary{
-		ActivePlaybacks: []mediaserver.PlaybackSession{
-			{User: "Angel", Title: "Heat", Client: "Jellyfin Web", DeviceName: "Firefox", MediaType: "Movie"},
-		},
+	cacheSetJSON(context.Background(), db, h.cacheKey("admin:playback"), []mediaserver.PlaybackSession{
+		{User: "Angel", Title: "Heat", Client: "Jellyfin Web", DeviceName: "Firefox", MediaType: "Movie"},
 	}, time.Minute)
 
 	w := httptest.NewRecorder()

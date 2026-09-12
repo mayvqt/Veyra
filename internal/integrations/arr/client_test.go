@@ -377,7 +377,7 @@ func TestUpcomingCalendarForShowAndMovie(t *testing.T) {
 		return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(body)), Header: make(http.Header)}, nil
 	})}
 
-	items, err := c.Upcoming(context.Background(), 7, 10)
+	items, err := c.UpcomingWindow(context.Background(), time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC), time.Date(2026, 6, 28, 0, 0, 0, 0, time.UTC), 10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -405,7 +405,7 @@ func TestUpcomingCalendarUsesSeriesTitleWhenSeriesObjectMissing(t *testing.T) {
 		return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(body)), Header: make(http.Header)}, nil
 	})}
 
-	items, err := c.Upcoming(context.Background(), 7, 10)
+	items, err := c.UpcomingWindow(context.Background(), time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC), time.Date(2026, 6, 28, 0, 0, 0, 0, time.UTC), 10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -438,10 +438,10 @@ func TestUpcomingSkipsInvalidDates(t *testing.T) {
 func TestUpcomingCalendarUsesDigitalReleaseFallback(t *testing.T) {
 	c := NewClient("Radarr", "http://radarr.local", "k")
 	c.http = &http.Client{Transport: testutil.RoundTripFunc(func(r *http.Request) (*http.Response, error) {
-		body := `[{"movie":{"title":"Avatar 3"},"digitalRelease":"2026-12-20T00:00:00Z"}]`
+		body := `[{"movie":{"title":"Avatar 3"},"inCinemas":"2026-01-01T00:00:00Z","digitalRelease":"2026-12-20T00:00:00Z"}]`
 		return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(body)), Header: make(http.Header)}, nil
 	})}
-	items, err := c.Upcoming(context.Background(), 7, 10)
+	items, err := c.UpcomingWindow(context.Background(), time.Date(2026, 12, 1, 0, 0, 0, 0, time.UTC), time.Date(2026, 12, 28, 0, 0, 0, 0, time.UTC), 10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -463,7 +463,7 @@ func TestUpcomingCalendarRequestsSeriesData(t *testing.T) {
 		return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(body)), Header: make(http.Header)}, nil
 	})}
 
-	items, err := c.Upcoming(context.Background(), 7, 10)
+	items, err := c.UpcomingWindow(context.Background(), time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC), time.Date(2026, 6, 28, 0, 0, 0, 0, time.UTC), 10)
 	if err != nil {
 		t.Fatal(err)
 	}

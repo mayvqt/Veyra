@@ -32,6 +32,7 @@ func mkDB(t *testing.T) *sql.DB {
 	if err != nil {
 		t.Fatal(err)
 	}
+	db.SetMaxOpenConns(1)
 	if err := store.InitSchema(context.Background(), db); err != nil {
 		t.Fatal(err)
 	}
@@ -673,7 +674,7 @@ func TestResolveSeerrUserNeverUsesMatchingNamesAsIdentity(t *testing.T) {
 			h.seerr = fake
 			r := httptest.NewRequest(http.MethodGet, "/dashboard", nil)
 			h.cacheSetJSON(r.Context(), "seerr:user:name:same-name", otherUser, time.Minute)
-			got := h.resolveSeerrUser(r, auth.User{MediaServerUserID: mediaID, Username: "same-name", DisplayName: "same-name"})
+			got, _ := h.resolveSeerrUser(r, auth.User{MediaServerUserID: mediaID, Username: "same-name", DisplayName: "same-name"})
 			if got.ID != 0 || fake.nameCalls != 0 {
 				t.Fatal("unlinked account resolved another user's identity by name or legacy cache")
 			}

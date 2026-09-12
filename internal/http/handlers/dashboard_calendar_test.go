@@ -149,11 +149,11 @@ func TestArrCombinersReportCompleteFailure(t *testing.T) {
 func TestArrCombinersKeepPartialResults(t *testing.T) {
 	success := successfulArrClient{name: "Sonarr"}
 	queue, queueErr := combineDownloadQueue(context.Background(), func(string, ...any) {}, 10, success, failingArrClient{name: "Radarr"})
-	if queueErr != nil || len(queue) != 1 {
+	if queueErr == nil || len(queue) != 1 {
 		t.Fatalf("queue = %+v, err = %v; want partial result", queue, queueErr)
 	}
 	calendar, calendarErr := combineUpcomingCalendar(context.Background(), func(string, ...any) {}, time.Now(), time.Now().Add(time.Hour), 10, success, failingArrClient{name: "Radarr"})
-	if calendarErr != nil || len(calendar) != 1 {
+	if calendarErr == nil || len(calendar) != 1 {
 		t.Fatalf("calendar = %+v, err = %v; want partial result", calendar, calendarErr)
 	}
 }

@@ -81,7 +81,7 @@ func TestCacheLoadJSONCoalescesConcurrentMisses(t *testing.T) {
 func TestCacheLoadJSONUsesBoundedStaleValueOnFailure(t *testing.T) {
 	h, db := mkHandlers(t)
 	defer db.Close()
-	if err := cacheSetJSON(context.Background(), db, "stale", x{A: 7}, -time.Second); err != nil {
+	if err := cacheSetJSON(context.Background(), db, h.cacheKey("stale"), x{A: 7}, -time.Second); err != nil {
 		t.Fatal(err)
 	}
 	value, stale, err := cacheLoadJSONWithStale(h, context.Background(), "stale", time.Minute, 5*time.Minute, func() (x, error) {
@@ -95,7 +95,7 @@ func TestCacheLoadJSONUsesBoundedStaleValueOnFailure(t *testing.T) {
 func TestCacheLoadJSONRejectsOverageStaleValue(t *testing.T) {
 	h, db := mkHandlers(t)
 	defer db.Close()
-	if err := cacheSetJSON(context.Background(), db, "too-old", x{A: 7}, -time.Hour); err != nil {
+	if err := cacheSetJSON(context.Background(), db, h.cacheKey("too-old"), x{A: 7}, -time.Hour); err != nil {
 		t.Fatal(err)
 	}
 	_, stale, err := cacheLoadJSONWithStale(h, context.Background(), "too-old", time.Minute, 5*time.Minute, func() (x, error) {

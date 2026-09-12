@@ -56,9 +56,10 @@ func (c *Client) hydrateTVSeasons(ctx context.Context, results []SearchResult) {
 	var wg sync.WaitGroup
 	sem := make(chan struct{}, maxSeasonLookups)
 	for i := range results {
-		if results[i].MediaType != "tv" || !results[i].CanRequest {
+		if results[i].MediaType != "tv" {
 			continue
 		}
+		results[i].CanRequest = false
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
@@ -66,9 +67,17 @@ func (c *Client) hydrateTVSeasons(ctx context.Context, results []SearchResult) {
 			case sem <- struct{}{}:
 				defer func() { <-sem }()
 			case <-ctx.Done():
+				results[i].Status = "Season details unavailable"
 				return
 			}
-			results[i].Seasons = c.tvSeasonOptions(ctx, results[i].ID)
+			seasons, err := c.tvSeasonOptions(ctx, results[i].ID)
+			results[i].Seasons = seasons
+			results[i].CanRequest = err == nil && len(seasons) > 0
+			if err != nil {
+				results[i].Status = "Season details unavailable"
+			} else if len(seasons) == 0 {
+				results[i].Status = "No seasons to request"
+			}
 		}(i)
 	}
 	wg.Wait()
@@ -180,8 +189,12 @@ func activeRequestExists(row map[string]any) bool {
 		if !ok {
 			continue
 		}
+		is4K, _ := req["is4k"].(bool)
+		if is4K {
+			continue
+		}
 		status, _ := directInt(req, "status")
-		if status == 1 || status == 2 {
+		if status != 3 && status != 5 {
 			return true
 		}
 	}
@@ -195,30 +208,31 @@ func (c *Client) publicMediaURL(mediaType string, id int) string {
 	return fmt.Sprintf("%s/%s/%d", c.publicURL, mediaType, id)
 }
 
-func (c *Client) tvSeasonOptions(ctx context.Context, tvID int) []SeasonOption {
+func (c *Client) tvSeasonOptions(ctx context.Context, tvID int) ([]SeasonOption, error) {
 	if tvID <= 0 {
-		return nil
+		return nil, fmt.Errorf("season details unavailable")
 	}
 	req, err := c.newRequest(ctx, http.MethodGet, "/api/v1/tv/"+strconv.Itoa(tvID), nil)
 	if err != nil {
-		return nil
+		return nil, fmt.Errorf("season details unavailable")
 	}
 	resp, err := c.http.Do(req)
 	if err != nil {
-		return nil
+		return nil, fmt.Errorf("season details unavailable")
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return nil
+		return nil, fmt.Errorf("season details unavailable")
 	}
 	var payload map[string]any
 	if err := decodeLimitedSeerrJSON(resp.Body, &payload); err != nil {
-		return nil
+		return nil, fmt.Errorf("season details unavailable")
 	}
 	rows, ok := anySlicePath(payload, "seasons")
 	if !ok {
-		return nil
+		return nil, fmt.Errorf("season details unavailable")
 	}
+	blocked := unavailableStandardSeasons(payload)
 	out := make([]SeasonOption, 0, len(rows))
 	for _, item := range rows {
 		row, ok := item.(map[string]any)
@@ -226,7 +240,7 @@ func (c *Client) tvSeasonOptions(ctx context.Context, tvID int) []SeasonOption {
 			continue
 		}
 		number, _ := directInt(row, "seasonNumber")
-		if number <= 0 {
+		if number <= 0 || blocked[number] {
 			continue
 		}
 		episodes, _ := directInt(row, "episodeCount")
@@ -236,5 +250,44 @@ func (c *Client) tvSeasonOptions(ctx context.Context, tvID int) []SeasonOption {
 		}
 		out = append(out, SeasonOption{Number: number, Name: name, EpisodeCount: episodes})
 	}
-	return out
+	return out, nil
+}
+
+// Seerr separates standard and 4K availability and request ownership.
+func unavailableStandardSeasons(payload map[string]any) map[int]bool {
+	blocked := make(map[int]bool)
+	seasons, _ := anySlicePath(payload, "mediaInfo", "seasons")
+	for _, item := range seasons {
+		row, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		number, _ := directInt(row, "seasonNumber")
+		status, _ := directInt(row, "status")
+		if status != 1 && status != 6 {
+			blocked[number] = true
+		}
+	}
+	requests, _ := anySlicePath(payload, "mediaInfo", "requests")
+	for _, item := range requests {
+		row, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		is4K, _ := row["is4k"].(bool)
+		status, _ := directInt(row, "status")
+		if is4K || status == 3 || status == 5 {
+			continue
+		}
+		seasons, _ := anySlicePath(row, "seasons")
+		for _, item := range seasons {
+			season, ok := item.(map[string]any)
+			if !ok {
+				continue
+			}
+			number, _ := directInt(season, "seasonNumber")
+			blocked[number] = true
+		}
+	}
+	return blocked
 }

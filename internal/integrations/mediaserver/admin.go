@@ -201,3 +201,14 @@ func (c *Client) getJSONWithFallback(ctx context.Context, paths []string, token 
 	}
 	return nil
 }
+
+func (c *Client) ActivePlayback(ctx context.Context) ([]PlaybackSession, error) {
+	if !c.HasAPIKey() {
+		return nil, fmt.Errorf("media server API key is not configured")
+	}
+	var sessions []sessionPayload
+	if err := c.getJSON(ctx, "/Sessions", c.apiKey, &sessions); err != nil {
+		return nil, err
+	}
+	return activePlaybackSessions(sessions), nil
+}
