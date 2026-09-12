@@ -159,7 +159,7 @@ func (c *Client) CreateRequest(ctx context.Context, in CreateRequestInput) (Crea
 		if resp.StatusCode == http.StatusAccepted {
 			return CreatedRequest{}, ErrRequestConflict
 		}
-		return CreatedRequest{}, fmt.Errorf("Seerr returned no request identifier")
+		return CreatedRequest{}, fmt.Errorf("seerr returned no request identifier")
 	}
 	return CreatedRequest{ID: row.ID, Status: statusLabel(row.Status)}, nil
 }
