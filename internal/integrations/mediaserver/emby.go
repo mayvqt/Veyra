@@ -24,6 +24,9 @@ func (embyProvider) LatestItemsPath(userID, itemTypes string, limit int) string 
 	query := url.Values{}
 	query.Set("Limit", fmt.Sprintf("%d", limit))
 	query.Set("Fields", "DateCreated,ProductionYear")
+	if itemTypes == recentTVTypes {
+		query.Set("Fields", "DateCreated,ProductionYear,SeriesId,SeriesName,SeriesPrimaryImage")
+	}
 	query.Set("IncludeItemTypes", itemTypes)
 	query.Set("EnableImages", "true")
 	query.Set("ImageTypeLimit", "1")

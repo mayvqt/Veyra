@@ -41,7 +41,7 @@ func TestHealthAndRecentlyAdded(t *testing.T) {
 			if types == "Movie" {
 				body = `[{"Id":"m1","Name":"Movie1","Type":"Movie","ProductionYear":2024,"DateCreated":"2025-01-01T00:00:00Z","ImageTags":{"Primary":"tag1"}}]`
 			}
-			if types == "Episode,Series" {
+			if types == "Episode" {
 				body = `[{"Id":"e1","Name":"The Beginning","Type":"Episode","ProductionYear":2025,"DateCreated":"2025-01-02T00:00:00Z","SeriesId":"s1","SeriesName":"Show1","SeriesPrimaryImageTag":"series-tag","ParentIndexNumber":1,"IndexNumber":2,"ImageTags":{"Primary":"episode-tag"}}]`
 			}
 			return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(body)), Header: make(http.Header)}, nil
@@ -137,8 +137,8 @@ func TestRecentlyAddedUsesTypeSpecificRequests(t *testing.T) {
 	if calls["Movie"] != 1 {
 		t.Fatalf("expected one Movie call, got %d", calls["Movie"])
 	}
-	if calls["Episode,Series"] != 1 {
-		t.Fatalf("expected one Episode,Series call, got %d", calls["Episode,Series"])
+	if calls["Episode"] != 1 {
+		t.Fatalf("expected one Episode call, got %d", calls["Episode"])
 	}
 }
 
@@ -166,7 +166,7 @@ func TestRecentlyAddedFetchesMovieAndTVConcurrently(t *testing.T) {
 		done <- result{items: items, err: err}
 	}()
 
-	testutil.WaitForSignals(t, started, 300*time.Millisecond, "Movie", "Episode,Series")
+	testutil.WaitForSignals(t, started, 300*time.Millisecond, "Movie", "Episode")
 	close(release)
 	got := <-done
 	if got.err != nil {

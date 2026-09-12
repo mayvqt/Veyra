@@ -26,6 +26,8 @@ Integration cache keys include a SHA-256 namespace derived from both media-serve
 and Seerr configuration and the other upstream settings. Numeric upstream user IDs
 are never reused across configuration changes. Failed concurrent refreshes share
 one result with a five-second cooldown; canceled waiters return independently.
+The recently added widget uses a versioned `media:recent:v2:` key so cached
+episode-per-card payloads from older versions cannot reappear after an outage.
 
 `settings.auth.origin` stores the normalized media-server type and internal URL.
 Router startup compares it before accepting sessions and transactionally revokes

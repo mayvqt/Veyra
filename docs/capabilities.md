@@ -3,7 +3,7 @@
 Veyra gives Jellyfin or Emby users one place to:
 
 - sign in with their media-server account;
-- see recently added media and open it on the media server;
+- see recently added movies and TV shows, with episodes consolidated into one card per show, and open them on the media server;
 - search Seerr, choose seasons, submit requests, and review request status;
 - view Sonarr and Radarr queues and upcoming releases; and
 - follow links to configured services.

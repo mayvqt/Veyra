@@ -7,4 +7,6 @@
 
 Configure Seerr's Radarr/Sonarr server, profile, root, and language defaults inside Seerr.
 
+Recently added shows appear once, ordered by their newest added episode. Their cards open the show and use its poster; movies remain individual entries. The media server's Recently Added preferences still apply. Episodes without a supplied series identity remain separate instead of being combined by name.
+
 Calendar day headings and times use UTC. Movie entries distinguish theatrical, digital, and physical releases within the selected week. Optional unconfigured services are excluded from loading. Outages are labelled as unavailable or incomplete; complete cached data may be shown for up to 15 minutes.

@@ -999,6 +999,7 @@
   }
 
   .recently-added-grid {
+    grid-template-columns: none;
     grid-auto-columns: minmax(9.4rem, 45vw);
     margin-inline: calc(var(--space-3) * -1);
     padding-inline: var(--space-3);

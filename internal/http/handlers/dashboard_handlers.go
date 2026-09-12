@@ -120,7 +120,7 @@ func (h *Handlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 				recentMediaUnavailable = true
 				return
 			}
-			cacheKey := "media:recent:" + strings.ToLower(strings.TrimSpace(u.MediaServerUserID))
+			cacheKey := "media:recent:v2:" + strings.ToLower(strings.TrimSpace(u.MediaServerUserID))
 			items, stale, err := cacheLoadJSONWithStale(h, r.Context(), cacheKey, cacheTTLWidget, cacheMaxStaleWidget, func() ([]dashboard.MediaItem, error) {
 				return h.fetchMediaRecentlyAddedWithAPIKey(r.Context(), u.MediaServerUserID)
 			})

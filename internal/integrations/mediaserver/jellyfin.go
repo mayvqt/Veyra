@@ -28,7 +28,7 @@ func (jellyfinProvider) LatestItemsPath(userID, itemTypes string, limit int) str
 	query := url.Values{}
 	query.Set("userId", userID)
 	query.Set("limit", fmt.Sprintf("%d", limit))
-	query.Set("fields", "DateCreated,ProductionYear")
+	query.Set("fields", "DateCreated")
 	query.Set("includeItemTypes", itemTypes)
 	query.Set("enableImages", "true")
 	query.Set("imageTypeLimit", "1")
